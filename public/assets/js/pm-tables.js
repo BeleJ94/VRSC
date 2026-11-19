@@ -371,6 +371,7 @@
           } },
           { data: 'engaged_amount', title: t('js.edb.engaged'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.engaged_amount, locale); } },
           { data: 'received_value', title: t('js.edb.received_value'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.received_value, locale); } },
+          { data: 'paid_amount', title: t('js.edb.paid_amount'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.paid_amount, locale); } },
           { data: 'remaining_amount', title: t('js.edb.remaining_amount'), className: 'dt-right', text: function (r) {
             return r.remaining_amount === null || r.remaining_amount === undefined ? t('js.stock.value_missing') : Core.formatMoney(r.remaining_amount, locale);
           } },
@@ -389,6 +390,21 @@
           { data: 'proofs', title: t('js.edb.proofs'), orderable: false, html: function (r) {
             return '<span class="mono small">' + esc([r.orders, r.proofs].filter(Boolean).join(' · ')) + '</span>';
           }, text: function (r) { return [r.orders, r.proofs].filter(Boolean).join(' · '); } }
+        ]
+      },
+
+      // Dépenses d'une période par site, projet, centre de coûts ou catégorie
+      finance_summary: {
+        order: [[4, 'desc']],
+        columns: [
+          { data: 'label', title: t('js.finance.label'), html: function (r) { return '<strong>' + esc(financeLabel(r, t)) + '</strong>'; },
+            text: function (r) { return financeLabel(r, t); } },
+          { data: 'requested', title: t('js.finance.requested'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.requested, locale); } },
+          { data: 'approved', title: t('js.finance.approved'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.approved, locale); } },
+          { data: 'engaged', title: t('js.finance.engaged'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.engaged, locale); } },
+          { data: 'paid', title: t('js.finance.paid'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.paid, locale); } },
+          { data: 'remaining', title: t('js.finance.remaining'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.remaining, locale); } },
+          { data: 'advances', title: t('js.finance.advances'), className: 'dt-right', text: function (r) { return Number(r.advances) ? Core.formatMoney(r.advances, locale) : ''; } }
         ]
       }
     };
@@ -420,6 +436,13 @@
       });
     });
     return defs;
+  }
+
+  /** Libellé d'une ligne de l'état des dépenses : une catégorie est traduite, les autres dimensions sont des noms. */
+  function financeLabel(r, t) {
+    var key = 'finance_category.' + r.label;
+    var label = t(key);
+    return label === key ? r.label : label;
   }
 
   /** Pastille de statut d'un EDB (le sous-statut « exécution partielle » a sa propre couleur). */

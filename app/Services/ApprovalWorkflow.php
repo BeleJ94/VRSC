@@ -20,6 +20,7 @@ final class ApprovalWorkflow
         StockInventoryService::ENTITY => StockInventoryService::class,
         PurchaseRequestService::ENTITY => PurchaseRequestService::class,
         FleetTransferService::ENTITY => FleetTransferService::class,
+        PaymentService::ENTITY => PaymentService::class,
     ];
 
     /** Étapes « type:code » qui ne se valident pas par le formulaire générique mais par un acte métier (check-list). */
@@ -31,6 +32,7 @@ final class ApprovalWorkflow
         StockInventoryService::ENTITY => '/stock/inventories/',
         PurchaseRequestService::ENTITY => '/edb/',
         FleetTransferService::ENTITY => '/fleet-transfers/',
+        PaymentService::ENTITY => '/finance/payments/',
     ];
 
     public function __construct(

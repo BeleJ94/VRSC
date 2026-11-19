@@ -30,8 +30,10 @@ enum Role: string
     case Cashier = 'cashier';
     /** Finance : contrôle des pièces, engagements, rapprochements. */
     case Finance = 'finance';
+    /** Direction générale : approuve les décaissements, vues consolidées. */
+    case Director = 'director';
 
-    private const VRSC = ['requester', 'supervisor', 'logistics', 'storekeeper', 'buyer', 'cashier', 'finance'];
+    private const VRSC = ['requester', 'supervisor', 'logistics', 'storekeeper', 'buyer', 'cashier', 'finance', 'director'];
 
     private const PERMISSIONS = [
         'meters.entry' => ['admin', 'manager', 'technician', 'encoder'],
@@ -72,6 +74,12 @@ enum Role: string
         'fleet.transfer' => ['admin', 'manager', 'supervisor', 'logistics', 'requester'],
         'fleet.check' => ['admin', 'manager', 'technician'],
         'fleet.dispatch' => ['admin', 'manager', 'supervisor', 'logistics'],
+        // Finance : factures, demandes de décaissement, paiement (caissier), caisse
+        'finance.view' => ['admin', 'finance', 'cashier', 'logistics', 'director', 'buyer'],
+        'finance.invoice' => ['admin', 'finance', 'buyer'],
+        'finance.request' => ['admin', 'finance', 'buyer', 'logistics', 'requester', 'supervisor', 'manager'],
+        'finance.pay' => ['admin', 'cashier'],
+        'cash.manage' => ['admin', 'cashier', 'finance'],
         'parts.manage' => ['admin', 'manager'],
         'field.use' => ['admin', 'manager', 'technician'],
         'personnel.view' => ['admin', 'manager', 'technician', 'viewer'],

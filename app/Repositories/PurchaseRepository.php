@@ -27,6 +27,7 @@ final class PurchaseRepository extends Repository
         'executed_at' => 'x.executed_at',
         'engaged_amount' => 'x.engaged_amount',
         'received_value' => 'x.received_value',
+        'paid_amount' => 'x.paid_amount',
         'remaining_amount' => 'x.remaining_amount',
         'qty_remaining' => 'x.qty_remaining',
         'age_days' => 'x.age_days',
@@ -164,6 +165,8 @@ final class PurchaseRepository extends Repository
                              WHERE l.request_id = r.id AND f.done_at <= $limit) AS received_value,
                            (SELECT COALESCE(SUM(o.total_amount), 0) FROM purchase_orders o
                              WHERE o.request_id = r.id AND o.status <> 'cancelled' AND o.ordered_at <= $limit) AS engaged_amount,
+                           (SELECT COALESCE(SUM(pay.amount), 0) FROM payment_requests pay
+                             WHERE pay.request_id = r.id AND pay.status = 'paid' AND pay.paid_at <= $limit) AS paid_amount,
                            (SELECT COALESCE(SUM(ol.qty_ordered - ol.qty_received), 0) FROM purchase_order_lines ol JOIN purchase_orders o ON o.id = ol.order_id
                              WHERE o.request_id = r.id AND o.status IN ('issued', 'partially_received')) AS qty_on_order,
                            (SELECT GROUP_CONCAT(o.reference ORDER BY o.id SEPARATOR ', ') FROM purchase_orders o

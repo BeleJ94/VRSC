@@ -152,7 +152,26 @@ Cahier des charges § 4, recette R3 et R4.
 
 La fiche engin ne permet plus de modifier le site : il change uniquement à la réception d'un ordre de transfert.
 
-Lots suivants : finance / caisse, carburant et coûts par équipement.
+### Finance, caisse et engagements (lot 5 de la refonte)
+
+Cahier des charges § 7 ; fin de la recette R1 (preuve de paiement, le paiement seul ne clôture pas).
+
+| Brique | Où | Règles clés |
+|---|---|---|
+| Factures fournisseurs | `/finance/invoices`, `PaymentService::recordInvoice` | toujours contre une commande ; (fournisseur, numéro) unique ; total facturé ≤ commande ; scan en pièce jointe |
+| Demandes de décaissement | `/finance/payments` | numéro `DD-AAAA-n` ; règlement de facture (≤ reste à payer, demandes en cours déduites), avance à justifier sur un EDB approuvé, ou dépense directe dont l'approbation vaut engagement |
+| Circuit | `ApprovalService` (`payment_request`) | vérification des pièces et de la disponibilité (Finance) → approbation (Direction générale ou Direction Logistique) |
+| Paiement | `PaymentService::pay` | par un caissier qui n'est ni le demandeur ni un approbateur ; preuve de paiement obligatoire ; espèces = sortie de caisse (fonds suffisants), sinon référence de virement / chèque unique |
+| Double paiement | factures et paiements | facture unique par fournisseur, reste à payer recontrôlé au paiement, référence de paiement non réutilisable |
+| Avances | fiche du décaissement | justification par pièces, reliquat rendu à la caisse, suivi des avances à justifier |
+| Caisse | `/finance/cash`, `CashService` | écritures numérotées `PC-AAAA-n` jamais modifiées, solde jamais négatif, journal quotidien avec soldes d'ouverture / clôture, arrêté avec comptage et écart expliqué, jours arrêtés dans l'ordre et verrouillés |
+| Rapprochement | `/finance/reconciliation` | commandé / reçu / facturé / payé par commande ; anomalies : payé non reçu, facturé non reçu, reçu non facturé, impayé, reste à livrer |
+| États | `/finance/reports` | demandé, approuvé, engagé, payé, restant, avances à justifier — par site, projet, centre de coûts ou catégorie ; exports Excel / PDF |
+| EDB | rapports mensuels | colonne « décaissé » ; un paiement ne change jamais le statut d'un EDB |
+
+Nouveau rôle : Direction générale (`director`).
+
+Lots suivants : carburant et coûts par équipement, compléments flotte, sauvegardes.
 
 ### Cycle de vie d'un OT et état de l'engin
 

@@ -17,6 +17,7 @@ use App\Controllers\DashboardController;
 use App\Controllers\DocumentController;
 use App\Controllers\EquipmentController;
 use App\Controllers\FieldController;
+use App\Controllers\FinanceController;
 use App\Controllers\FleetTransferController;
 use App\Controllers\ManagementController;
 use App\Controllers\MeterController;
@@ -183,6 +184,26 @@ return static function (Router $r): void {
     $r->post('/fleet-transfers/{id}/depart', [FleetTransferController::class, 'depart'], ['permission' => 'fleet.dispatch']);
     $r->post('/fleet-transfers/{id}/receive', [FleetTransferController::class, 'receive'], ['permission' => 'fleet.dispatch']);
     $r->post('/fleet-transfers/{id}/cancel', [FleetTransferController::class, 'cancel'], ['permission' => 'fleet.transfer']);
+
+    // Finance : factures, décaissements, caisse, rapprochement, états de dépenses
+    $r->get('/finance', [FinanceController::class, 'index'], ['permission' => 'finance.view']);
+    $r->get('/finance/invoices', [FinanceController::class, 'invoices'], ['permission' => 'finance.view']);
+    $r->post('/finance/invoices', [FinanceController::class, 'storeInvoice'], ['permission' => 'finance.invoice']);
+    $r->post('/finance/invoices/{id}/cancel', [FinanceController::class, 'cancelInvoice'], ['permission' => 'finance.invoice']);
+    $r->get('/finance/payments', [FinanceController::class, 'payments'], ['permission' => 'finance.view']);
+    $r->get('/finance/payments/create', [FinanceController::class, 'createPayment'], ['permission' => 'finance.request']);
+    $r->post('/finance/payments', [FinanceController::class, 'storePayment'], ['permission' => 'finance.request']);
+    $r->get('/finance/payments/{id}', [FinanceController::class, 'showPayment'], ['permission' => 'finance.view']);
+    $r->post('/finance/payments/{id}/pay', [FinanceController::class, 'pay'], ['permission' => 'finance.pay']);
+    $r->post('/finance/payments/{id}/justify', [FinanceController::class, 'justify'], ['permission' => 'finance.view']);
+    $r->post('/finance/payments/{id}/cancel', [FinanceController::class, 'cancelPayment'], ['permission' => 'finance.request']);
+    $r->get('/finance/cash', [FinanceController::class, 'cashJournal'], ['permission' => 'finance.view']);
+    $r->post('/finance/cash', [FinanceController::class, 'storeRegister'], ['permission' => 'cash.manage']);
+    $r->post('/finance/cash/{id}/entries', [FinanceController::class, 'cashEntry'], ['permission' => 'cash.manage']);
+    $r->post('/finance/cash/{id}/close', [FinanceController::class, 'cashClose'], ['permission' => 'cash.manage']);
+    $r->get('/finance/reports', [FinanceController::class, 'reports'], ['permission' => 'finance.view']);
+    $r->get('/finance/reports/data', [FinanceController::class, 'reportsData'], ['permission' => 'finance.view']);
+    $r->get('/finance/reconciliation', [FinanceController::class, 'reconciliation'], ['permission' => 'finance.view']);
 
     // Mes validations (circuit d'approbation)
     $r->get('/approvals', [ApprovalController::class, 'index'], ['permission' => 'approvals.use']);

@@ -24,7 +24,8 @@ const REPOSITORIES = {
   stock_statement: 'StockLedgerRepository',
   stock_journal: 'StockLedgerRepository',
   purchase_requests: 'PurchaseRepository',
-  purchase_execution: 'PurchaseRepository'
+  purchase_execution: 'PurchaseRepository',
+  finance_summary: 'FinanceRepository'
 };
 
 test('chaque tableau a un repository et chaque colonne triable est dans sa liste blanche PHP', () => {
@@ -73,7 +74,8 @@ test('le rendu HTML échappe les données utilisateur', () => {
       category: 'parts', estimated_amount: null, urgency: 'urgent', display_status: 'partial' },
     purchase_execution: { reference: evil, subject: evil, approved_at: '2026-01-05 10:00:00', executed_at: null, delay_days: null, estimated_amount: 10,
       engaged_amount: 5, received_value: 2, remaining_amount: 8, qty_remaining: 3, qty_satisfied: 1, qty_requested: 4, stage: 'delivery',
-      display_status: 'partial', age_days: 12, requester: evil, site: evil, orders: evil, proofs: evil }
+      display_status: 'partial', age_days: 12, requester: evil, site: evil, orders: evil, proofs: evil, paid_amount: 1 },
+    finance_summary: { label: evil, requested: 1, approved: 1, engaged: 1, paid: 1, remaining: 0, advances: 0 }
   };
   for (const [name, def] of Object.entries(defs)) {
     for (const col of def.columns) {
