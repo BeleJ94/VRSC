@@ -22,7 +22,9 @@ const REPOSITORIES = {
   readings: 'MeterReadingRepository',
   activity: 'ActivityLogRepository',
   stock_statement: 'StockLedgerRepository',
-  stock_journal: 'StockLedgerRepository'
+  stock_journal: 'StockLedgerRepository',
+  purchase_requests: 'PurchaseRepository',
+  purchase_execution: 'PurchaseRepository'
 };
 
 test('chaque tableau a un repository et chaque colonne triable est dans sa liste blanche PHP', () => {
@@ -66,7 +68,12 @@ test('le rendu HTML échappe les données utilisateur', () => {
     stock_statement: { reference: evil, name: evil, unit: evil, site: evil, site_id: 1, qty_open: 1, receipts: 2, returns: 0, issues: 1, transfers: 0,
       adjustments: 0, qty_close: 2, min_quantity: 5, in_transit: 1, value_close: null },
     stock_journal: { moved_on: '2026-01-05', document_ref: evil, work_order: evil, part: evil, part_name: evil, site: evil, type: 'receipt', delta: 3,
-      stock_after: 3, unit: evil, value: null, beneficiary: evil, user: evil, comment: evil }
+      stock_after: 3, unit: evil, value: null, beneficiary: evil, user: evil, comment: evil },
+    purchase_requests: { reference: evil, requested_at: '2026-01-05 10:00:00', requester: evil, department: evil, site: evil, project: evil, subject: evil,
+      category: 'parts', estimated_amount: null, urgency: 'urgent', display_status: 'partial' },
+    purchase_execution: { reference: evil, subject: evil, approved_at: '2026-01-05 10:00:00', executed_at: null, delay_days: null, estimated_amount: 10,
+      engaged_amount: 5, received_value: 2, remaining_amount: 8, qty_remaining: 3, qty_satisfied: 1, qty_requested: 4, stage: 'delivery',
+      display_status: 'partial', age_days: 12, requester: evil, site: evil, orders: evil, proofs: evil }
   };
   for (const [name, def] of Object.entries(defs)) {
     for (const col of def.columns) {

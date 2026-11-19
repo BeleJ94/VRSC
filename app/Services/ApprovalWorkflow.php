@@ -18,12 +18,14 @@ final class ApprovalWorkflow
     private const HANDLERS = [
         StockTransferService::ENTITY => StockTransferService::class,
         StockInventoryService::ENTITY => StockInventoryService::class,
+        PurchaseRequestService::ENTITY => PurchaseRequestService::class,
     ];
 
     /** Type d'entité → page du document. */
     private const PAGES = [
         StockTransferService::ENTITY => '/stock/transfers/',
         StockInventoryService::ENTITY => '/stock/inventories/',
+        PurchaseRequestService::ENTITY => '/edb/',
     ];
 
     public function __construct(

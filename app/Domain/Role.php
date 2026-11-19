@@ -63,6 +63,10 @@ enum Role: string
         'stock.transfer' => ['admin', 'manager', 'storekeeper', 'requester', 'supervisor', 'logistics'],
         'stock.inventory' => ['admin', 'manager', 'storekeeper'],
         'stock.close' => ['admin', 'logistics', 'finance'],
+        // États de besoins (EDB) et achats : émission, service depuis le stock, devis et commandes
+        'edb.view' => ['admin', 'manager', 'viewer', ...self::VRSC],
+        'edb.create' => ['admin', 'manager', 'technician', 'requester', 'supervisor', 'storekeeper'],
+        'purchase.manage' => ['admin', 'buyer', 'logistics'],
         'parts.manage' => ['admin', 'manager'],
         'field.use' => ['admin', 'manager', 'technician'],
         'personnel.view' => ['admin', 'manager', 'technician', 'viewer'],

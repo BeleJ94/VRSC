@@ -1136,6 +1136,15 @@
 
   // ---------------------------------------------------------------- Impression et envoi automatique des sélecteurs
   $(document).on('click', '[data-print]', function () { window.print(); });
+
+  // Recharge la page avec les filtres du formulaire (synthèses calculées côté serveur, ex. rapports EDB).
+  $(document).on('click', '[data-apply-filters]', function (e) {
+    e.preventDefault();
+    var form = $(this).closest('form')[0];
+    var params = new URLSearchParams();
+    new FormData(form).forEach(function (value, key) { if (value !== '') params.set(key, value); });
+    window.location.href = this.href.split('?')[0] + '?' + params.toString();
+  });
   $(document).on('change', 'select[data-autosubmit]', function () { this.form.submit(); });
 
   // ---------------------------------------------------------------- Zones de texte extensibles (Ctrl+Entrée pour envoyer)

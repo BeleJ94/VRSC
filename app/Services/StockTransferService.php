@@ -32,6 +32,7 @@ final class StockTransferService
         private readonly NumberingService $numbering,
         private readonly ActivityLogger $logger,
         private readonly Auth $auth,
+        private readonly \App\Core\Container $container,
     ) {
     }
 
@@ -185,6 +186,12 @@ final class StockTransferService
                     ]);
                 }
                 $this->documents->updateTransferLine((int) $line['id'], ['qty_received' => $qty]);
+                if ($qty > 0 && $line['request_line_id'] !== null) {
+                    // Transfert demandé pour un EDB : seule la quantité réellement reçue satisfait le besoin.
+                    $requestId = (int) $this->db->fetchValue('SELECT request_id FROM purchase_request_lines WHERE id = :id', ['id' => $line['request_line_id']]);
+                    $this->container->get(PurchaseRequestService::class)->fulfil($requestId, (int) $line['request_line_id'], 'transfer', $qty,
+                        $line['unit_cost'] !== null ? round($qty * (float) $line['unit_cost'], 2) : null, $transfer['reference']);
+                }
                 $discrepancy = $discrepancy || abs($qty - $shipped) > 0.0001;
             }
             if ($discrepancy && $note === '') {

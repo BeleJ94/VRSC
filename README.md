@@ -120,7 +120,22 @@ Cahier des charges § 5, recette R6 et R7. Le stock d'un site est celui de son m
 | Clôture mensuelle | `/stock/periods` | soldes figés, période verrouillée, clôture dans l'ordre, bloquée par un transit ou un inventaire ouvert |
 | Mes validations | `/approvals` | demandes que les fonctions de l'utilisateur permettent de traiter ; décision enregistrée sur la page du document |
 
-Lots suivants : EDB / achats, transferts d'engins (OTV), finance / caisse, carburant et coûts par équipement.
+### États de besoins et achats (lot 3 de la refonte)
+
+Cahier des charges § 6 et § 5.1, recette R1 (hors paiement, traité au lot Finance) et R2.
+
+| Brique | Où | Règles clés |
+|---|---|---|
+| EDB | `/edb`, `PurchaseRequestService` | numéro `EDB-AAAA-n`, imputation site / service / projet / centre de coûts / engin, lignes d'articles ou besoins libres ; circuit : visa hiérarchique (avis) → Direction Logistique → Finance à partir de 5 000 (seuil dans `approval_flow_steps.min_amount`) |
+| Statuts | `purchase_requests.status` | en attente → approuvé non exécuté (sous-statut « exécution partielle ») → approuvé exécuté ; annulé (motif obligatoire, refus compris) |
+| Satisfaction | `purchase_fulfilments` | écritures datées et justifiées : sortie du stock local (BS), réception de transfert (BT), bon de réception (BR) ; l'EDB n'est exécuté que quand il ne reste rien à satisfaire — ni une commande ni un paiement ne le clôturent |
+| Recherche de stock | fiche EDB | disponible local, puis autres magasins (transfert lié à la ligne), sinon achat ; jamais plus que le reste à sourcer |
+| Devis et commande | fiche EDB, `/purchases` | devis comparés, choix d'un devis plus cher motivé, bon de commande `BC-AAAA-n` référencé à l'EDB |
+| Réception | `/purchases/{id}` | bon de livraison obligatoire, accepté / refusé (motif), transporteur, plaque, chauffeur, scan ; l'acheteur ne réceptionne pas ; l'accepté entre en stock au prix de commande |
+| Reste chez le fournisseur | `/purchases#outstanding` | commandé − reçu, valeur et retard par ligne |
+| Rapports mensuels | `/edb/reports` | 1. EDB émis, 2. approuvés exécutés, 3. approuvés non intégralement exécutés ; soldes d'ouverture / clôture, nouveaux, annulés, taux d'exécution en nombre et en valeur ; filtres ; exports Excel / PDF |
+
+Lots suivants : transferts d'engins (OTV), finance / caisse, carburant et coûts par équipement.
 
 ### Cycle de vie d'un OT et état de l'engin
 

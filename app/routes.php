@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Controllers\ActivityController;
 use App\Controllers\ApprovalController;
+use App\Controllers\PurchaseController;
 use App\Controllers\StockController;
 use App\Controllers\StockInventoryController;
 use App\Controllers\StockTransferController;
@@ -153,6 +154,24 @@ return static function (Router $r): void {
     $r->get('/stock/inventories/{id}', [StockInventoryController::class, 'show'], ['permission' => 'stock.view']);
     $r->post('/stock/inventories/{id}/counts', [StockInventoryController::class, 'counts'], ['permission' => 'stock.inventory']);
     $r->post('/stock/inventories/{id}/cancel', [StockInventoryController::class, 'cancel'], ['permission' => 'stock.inventory']);
+
+    // États de besoins (EDB), devis, commandes, réceptions, rapports mensuels
+    $r->get('/edb', [PurchaseController::class, 'index'], ['permission' => 'edb.view']);
+    $r->get('/edb/data', [PurchaseController::class, 'data'], ['permission' => 'edb.view']);
+    $r->get('/edb/reports', [PurchaseController::class, 'reports'], ['permission' => 'edb.view']);
+    $r->get('/edb/create', [PurchaseController::class, 'create'], ['permission' => 'edb.create']);
+    $r->post('/edb', [PurchaseController::class, 'store'], ['permission' => 'edb.create']);
+    $r->get('/edb/{id}', [PurchaseController::class, 'show'], ['permission' => 'edb.view']);
+    $r->post('/edb/{id}/cancel', [PurchaseController::class, 'cancel'], ['permission' => 'edb.create']);
+    $r->post('/edb/{id}/issue', [PurchaseController::class, 'issue'], ['permission' => 'stock.move']);
+    $r->post('/edb/{id}/transfer', [PurchaseController::class, 'transfer'], ['permission' => 'stock.transfer']);
+    $r->post('/edb/{id}/quotes', [PurchaseController::class, 'addQuote'], ['permission' => 'purchase.manage']);
+    $r->post('/edb/{id}/quotes/select', [PurchaseController::class, 'selectQuote'], ['permission' => 'purchase.manage']);
+    $r->post('/edb/{id}/orders', [PurchaseController::class, 'createOrder'], ['permission' => 'purchase.manage']);
+    $r->get('/purchases', [PurchaseController::class, 'orders'], ['permission' => 'edb.view']);
+    $r->get('/purchases/{id}', [PurchaseController::class, 'order'], ['permission' => 'edb.view']);
+    $r->post('/purchases/{id}/receive', [PurchaseController::class, 'receive'], ['permission' => 'stock.move']);
+    $r->post('/purchases/{id}/cancel', [PurchaseController::class, 'cancelOrder'], ['permission' => 'purchase.manage']);
 
     // Mes validations (circuit d'approbation)
     $r->get('/approvals', [ApprovalController::class, 'index'], ['permission' => 'approvals.use']);

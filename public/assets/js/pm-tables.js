@@ -326,6 +326,70 @@
             return esc(r.user || '') + (r.comment ? '<br><span class="muted">' + esc(r.comment) + '</span>' : '');
           }, text: function (r) { return r.user || ''; } }
         ]
+      },
+
+      // États de besoins : liste et rapport mensuel n° 1 (ensemble des EDB émis)
+      purchase_requests: {
+        order: [[1, 'desc']],
+        columns: [
+          { data: 'reference', title: t('js.edb.number'), html: function (r) { return '<strong>' + esc(r.reference) + '</strong>'; } },
+          { data: 'requested_at', title: t('js.date'), className: 'nowrap', text: function (r) { return date(r.requested_at); } },
+          { data: 'requester', title: t('js.edb.requester'), html: function (r) {
+            return esc(r.requester || '') + (r.department ? '<br><span class="muted">' + esc(r.department) + '</span>' : '');
+          }, text: function (r) { return [r.requester, r.department].filter(Boolean).join(' – '); } },
+          { data: 'site', title: t('fields.site_id'), html: function (r) {
+            return esc(r.site) + (r.project ? '<br><span class="muted">' + esc(r.project) + '</span>' : '');
+          }, text: function (r) { return [r.site, r.project].filter(Boolean).join(' – '); } },
+          { data: 'subject', title: t('js.edb.need'), html: function (r) {
+            return esc(r.subject) + '<br><span class="muted">' + esc(t('edb_category.' + r.category)) + '</span>';
+          }, text: function (r) { return r.subject; } },
+          { data: 'estimated_amount', title: t('js.edb.estimate'), className: 'dt-right', text: function (r) {
+            return r.estimated_amount === null || r.estimated_amount === undefined ? t('js.stock.value_missing') : Core.formatMoney(r.estimated_amount, locale);
+          } },
+          { data: 'urgency', title: t('js.edb.urgency'), html: function (r) {
+            var cls = { critical: 'critical', urgent: 'high' }[r.urgency] || 'neutral';
+            return '<span class="badge badge--' + cls + '">' + esc(t('urgency.' + r.urgency)) + '</span>';
+          }, text: function (r) { return t('urgency.' + r.urgency); } },
+          { data: 'display_status', title: t('fields.status'), html: function (r) { return edbStatus(r, t); },
+            text: function (r) { return t('edb_status.' + r.display_status); } }
+        ]
+      },
+
+      // Rapports mensuels n° 2 (approuvés intégralement exécutés) et n° 3 (approuvés non intégralement exécutés)
+      purchase_execution: {
+        order: [[1, 'asc']],
+        columns: [
+          { data: 'reference', title: t('js.edb.number'), html: function (r) {
+            return '<strong>' + esc(r.reference) + '</strong><br><span class="muted">' + esc(r.subject) + '</span>';
+          }, text: function (r) { return r.reference + ' – ' + r.subject; } },
+          { data: 'approved_at', title: t('js.edb.approved_at'), className: 'nowrap', text: function (r) { return date(r.approved_at); } },
+          { data: 'executed_at', title: t('js.edb.executed_at'), className: 'nowrap', text: function (r) {
+            return r.executed_at ? date(r.executed_at) + (r.delay_days !== null && r.delay_days !== undefined ? ' (' + t('js.days', { n: r.delay_days }) + ')' : '') : '';
+          } },
+          { data: 'estimated_amount', title: t('js.edb.approved_amount'), className: 'dt-right', text: function (r) {
+            return r.estimated_amount === null || r.estimated_amount === undefined ? t('js.stock.value_missing') : Core.formatMoney(r.estimated_amount, locale);
+          } },
+          { data: 'engaged_amount', title: t('js.edb.engaged'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.engaged_amount, locale); } },
+          { data: 'received_value', title: t('js.edb.received_value'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.received_value, locale); } },
+          { data: 'remaining_amount', title: t('js.edb.remaining_amount'), className: 'dt-right', text: function (r) {
+            return r.remaining_amount === null || r.remaining_amount === undefined ? t('js.stock.value_missing') : Core.formatMoney(r.remaining_amount, locale);
+          } },
+          { data: 'qty_remaining', title: t('js.edb.qty_remaining'), className: 'dt-right', html: function (r) {
+            return '<strong>' + esc(num(r.qty_remaining)) + '</strong><br><span class="muted">' + esc(num(r.qty_satisfied)) + ' / ' + esc(num(r.qty_requested)) + '</span>';
+          }, text: function (r) { return num(r.qty_remaining); } },
+          { data: 'stage', title: t('js.edb.stage'), html: function (r) {
+            return edbStatus(r, t) + (r.stage ? '<br><span class="muted">' + esc(t('edb_stage.' + r.stage)) + '</span>' : '');
+          }, text: function (r) { return t('edb_status.' + r.display_status) + (r.stage ? ' – ' + t('edb_stage.' + r.stage) : ''); } },
+          { data: 'age_days', title: t('js.edb.age'), className: 'dt-right', text: function (r) {
+            return r.age_days === null || r.age_days === undefined ? '' : t('js.days', { n: r.age_days });
+          } },
+          { data: 'requester', title: t('js.edb.responsible'), html: function (r) {
+            return esc(r.requester || '') + '<br><span class="muted">' + esc(r.site) + '</span>';
+          }, text: function (r) { return [r.requester, r.site].filter(Boolean).join(' – '); } },
+          { data: 'proofs', title: t('js.edb.proofs'), orderable: false, html: function (r) {
+            return '<span class="mono small">' + esc([r.orders, r.proofs].filter(Boolean).join(' · ')) + '</span>';
+          }, text: function (r) { return [r.orders, r.proofs].filter(Boolean).join(' · '); } }
+        ]
       }
     };
 
@@ -346,7 +410,9 @@
       stock_statement: { qty_open: { type: 'qty' }, receipts: { type: 'qty', blankZero: true }, returns: { type: 'qty', blankZero: true },
         issues: { type: 'qty', blankZero: true }, transfers: { type: 'qty', blankZero: true }, adjustments: { type: 'qty', blankZero: true },
         qty_close: { type: 'qty' }, in_transit: { type: 'qty', blankZero: true } },
-      stock_journal: { moved_on: { type: 'date' }, delta: { type: 'qty' } }
+      stock_journal: { moved_on: { type: 'date' }, delta: { type: 'qty' } },
+      purchase_requests: { requested_at: { type: 'date' } },
+      purchase_execution: { approved_at: { type: 'date' }, qty_remaining: { type: 'qty' }, age_days: { type: 'int', unit: days } }
     };
     Object.keys(XL).forEach(function (name) {
       defs[name].columns.forEach(function (col) {
@@ -354,6 +420,12 @@
       });
     });
     return defs;
+  }
+
+  /** Pastille de statut d'un EDB (le sous-statut « exécution partielle » a sa propre couleur). */
+  function edbStatus(r, t) {
+    var cls = { pending: 'waiting_part', approved: 'maintenance', partial: 'high', executed: 'available', cancelled: 'neutral' }[r.display_status] || 'neutral';
+    return '<span class="badge badge--' + cls + '">' + Core.escapeHtml(t('edb_status.' + r.display_status)) + '</span>';
   }
 
   /** Date / date-heure SQL → Date UTC (Excel l'affiche telle quelle, sans décalage de fuseau). */

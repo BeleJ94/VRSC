@@ -36,11 +36,16 @@ $sections = [
         ['/parts', 'package', 'nav.parts', 'parts.view', null],
         ['/procurement', 'shopping-cart', 'nav.procurement', 'parts.view', 'stock_out stock_low'],
     ]],
+    'purchasing' => ['nav.section_purchasing', [
+        ['/edb', 'file-pen-line', 'nav.edb', 'edb.view', null],
+        ['/purchases', 'receipt-text', 'nav.purchases', 'edb.view', null],
+        ['/edb/reports', 'bar-chart-3', 'nav.edb_reports', 'edb.view', null, true],
+    ]],
 ];
 // Ordre adapté au rôle : le technicien commence par la maintenance.
 $order = $currentUser->role->value === 'technician'
-    ? ['maintenance', 'fleet', 'steering', 'stores']
-    : ['steering', 'maintenance', 'fleet', 'stores'];
+    ? ['maintenance', 'fleet', 'steering', 'stores', 'purchasing']
+    : ['steering', 'purchasing', 'maintenance', 'fleet', 'stores'];
 $settings = [
     ['/sites', 'building-2', 'nav.sites_admin', 'sites.manage'],
     ['/users', 'users', 'nav.users', 'users.manage'],
@@ -59,7 +64,7 @@ $navLink = static function (array $l) use ($currentPath): string {
     $sub = !empty($l[5]);
     $blank = !empty($l[6]);
     // Un sous-lien actif ne doit pas allumer aussi son parent (« /stock » et « /stock/transfers »).
-    if ($l[0] === '/stock' && preg_match('#^/stock/(transfers|inventories)#', $currentPath)) {
+    if (($l[0] === '/stock' && preg_match('#^/stock/(transfers|inventories)#', $currentPath)) || ($l[0] === '/edb' && str_starts_with($currentPath, '/edb/reports'))) {
         $current = '';
     }
     return '<li' . ($sub ? ' class="nav__sub"' : '') . '><a href="' . e(url($l[0])) . '"' . $current . ($blank ? ' target="_blank" rel="noopener"' : '') . ' title="' . e(t($l[2])) . '"><i data-lucide="' . e($l[1]) . '"></i>'
