@@ -291,6 +291,12 @@ return static function (Router $r): void {
     $r->post('/delegations', [DelegationController::class, 'store'], ['permission' => 'delegations.manage']);
     $r->post('/delegations/{id}/revoke', [DelegationController::class, 'revoke'], ['permission' => 'delegations.manage']);
 
+    // Sauvegardes et tests de restauration
+    $r->get('/backups', [\App\Controllers\BackupController::class, 'index'], ['permission' => 'backups.manage']);
+    $r->post('/backups', [\App\Controllers\BackupController::class, 'store'], ['permission' => 'backups.manage']);
+    $r->post('/backups/{id}/verify', [\App\Controllers\BackupController::class, 'verify'], ['permission' => 'backups.manage']);
+    $r->get('/backups/{id}/download', [\App\Controllers\BackupController::class, 'download'], ['permission' => 'backups.manage']);
+
     // Pièces jointes (contrôle du périmètre dans le service)
     $r->get('/attachments/{id}', [AttachmentController::class, 'show'], ['permission' => 'attachments.view']);
 

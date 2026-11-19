@@ -1,0 +1,27 @@
+-- Lot 8 VRSC : journal des sauvegardes et des tests de restauration (recette R9).
+CREATE TABLE backups (
+    id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    file_name     VARCHAR(120) NOT NULL,
+    origin        ENUM('manual','scheduled','pre_restore') NOT NULL DEFAULT 'manual',
+    status        ENUM('ok','failed') NOT NULL,
+    size_bytes    BIGINT UNSIGNED NULL,
+    sha256        CHAR(64) NULL,
+    table_count   INT UNSIGNED NULL,
+    row_count     BIGINT UNSIGNED NULL,
+    file_count    INT UNSIGNED NULL,
+    duration_s    INT UNSIGNED NULL,
+    copied        TINYINT(1) NOT NULL DEFAULT 0,
+    error         TEXT NULL,
+    created_by    INT UNSIGNED NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    verified_at   DATETIME NULL,
+    verify_status ENUM('ok','failed') NULL,
+    verify_detail TEXT NULL,
+    verified_by   INT UNSIGNED NULL,
+    pruned_at     DATETIME NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_backups_file (file_name),
+    KEY idx_backups_created (created_at),
+    CONSTRAINT fk_backups_user FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_backups_verifier FOREIGN KEY (verified_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

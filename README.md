@@ -198,7 +198,34 @@ Ajouts : taux horaire sur la fiche du personnel, prestations externes sur la fic
 | Documents | `EquipmentDocumentService`, `/documents` | responsable du suivi ; état « en renouvellement » (responsable obligatoire, échéance toujours affichée, clos à la saisie du nouveau document) ; type déclaré « non applicable » à un engin avec motif, distinct de « non renseigné » |
 | Coûts par chantier | `/costs` | classement filtrable par projet ; le projet est remis à vide quand l'engin change de site |
 
-Lot suivant : sauvegardes planifiées et restauration testée.
+### Sauvegardes et restauration testée (lot 8 de la refonte)
+
+Recette R9. Écran « Sauvegardes » (administrateur), `BackupService`, `bin/backup.php`, `bin/restore.php`.
+
+| Brique | Règles clés |
+|---|---|
+| Sauvegarde | une archive ZIP par sauvegarde dans `storage/backups` (ou `BACKUP_DIR`) : `database.sql` (mysqldump en instantané cohérent), `uploads/` (fichiers joints), `manifest.json` (lignes par table) ; empreinte SHA-256 journalisée ; copie hors serveur si `BACKUP_COPY_DIR` est renseigné |
+| Test de restauration | empreinte contrôlée, archive restaurée dans une base temporaire `<base>_restore_check`, chaque table comparée au manifeste, base temporaire supprimée ; résultat journalisé |
+| Rétention | archives de plus de `BACKUP_RETENTION_DAYS` jours (30) supprimées, les 3 dernières réussies toujours gardées |
+| Surveillance | alerte à l'écran si aucune sauvegarde réussie depuis `BACKUP_MAX_AGE_HOURS` heures (26) ou si la dernière a échoué ; `php bin/backup.php --check` renvoie le code 1 dans ce cas |
+| Restauration réelle | en ligne de commande uniquement ; refusée sur la base de l'application sans `--force` ; une sauvegarde de précaution est créée d'abord |
+
+Planification quotidienne (à créer une fois sur le serveur) :
+
+```
+Windows : schtasks /Create /SC DAILY /ST 23:00 /TN "ETHAN VRSC - Sauvegarde" /TR "C:\xampp\php\php.exe \"C:\xampp\htdocs\ETHAN VRSC\bin\backup.php\" --verify"
+Linux   : 0 23 * * *  php /chemin/bin/backup.php --verify
+```
+
+Reprise après incident :
+
+```
+php bin/restore.php storage/backups/<archive>.zip --database=vrsc_reprise   # essai sans risque dans une autre base
+php bin/restore.php storage/backups/<archive>.zip --force --with-files      # remplace la base et remet les fichiers joints
+php bin/migrate.php                                                         # applique les migrations plus récentes que l'archive
+```
+
+Le compte de base de données doit pouvoir créer et supprimer la base temporaire du test. `MYSQL_BIN` indique le dossier de `mysqldump` et `mysql` s'ils ne sont pas dans le PATH (détecté automatiquement sous XAMPP).
 
 ### Cycle de vie d'un OT et état de l'engin
 

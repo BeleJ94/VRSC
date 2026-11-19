@@ -43,6 +43,7 @@ enum Role: string
         'reference.view' => ['admin', 'manager', 'viewer', ...self::VRSC],
         'reference.manage' => ['admin', 'logistics'],
         'delegations.manage' => ['admin', 'logistics'],
+        'backups.manage' => ['admin'],
         'approvals.use' => ['admin', 'manager', 'technician', ...self::VRSC],
         'approvals.override' => ['admin', 'logistics'],
         'attachments.view' => ['admin', 'manager', 'technician', 'viewer', ...self::VRSC],

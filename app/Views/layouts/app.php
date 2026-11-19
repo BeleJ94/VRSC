@@ -65,6 +65,7 @@ $settings = [
     ['/readings', 'book-open', 'nav.readings', 'readings.manage'],
     ['/settings/mail', 'mail', 'nav.mail_settings', 'settings.manage'],
     ['/activity', 'history', 'nav.activity', 'activity.view'],
+    ['/backups', 'database-backup', 'nav.backups', 'backups.manage'],
 ];
 $settings = array_values(array_filter($settings, static fn (array $l) => $currentUser->can($l[3])));
 $navLink = static function (array $l) use ($currentPath): string {
