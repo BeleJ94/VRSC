@@ -113,6 +113,8 @@ final class App
             ? $this->container->get(\App\Repositories\SiteRepository::class)->listActive()
             : [];
         $view->share('navSites', $navSites);
+        // Compteurs « à traiter » du menu (pages HTML uniquement).
+        $view->share('navCounts', $user !== null && !$request->wantsJson() ? $this->container->get(\App\Services\NavCounterService::class)->counts() : []);
         // Site de travail choisi dans le menu (contexte appliqué par défaut à toutes les pages)
         $context = $session->get('site_context');
         $view->share('siteContext', $context !== null && in_array((int) $context, array_map('intval', array_column($navSites, 'id')), true) ? (int) $context : null);

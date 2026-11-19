@@ -62,13 +62,13 @@ final class NavigationTest extends DatabaseTestCase
     public function testMenuSectionsFollowTheRole(): void
     {
         $admin = $this->http($this->session($this->createUser('admin')), 'GET', '/')->body;
-        foreach (['Pilotage', 'Maintenance', 'Parc &amp; équipes', 'Magasin', 'Paramètres', 'Mode terrain', 'data-nav-badge="overdue"', 'Gestion des sites', 'site-switch'] as $needle) {
+        foreach (['Mon travail', 'Maintenance', 'Flotte', 'Stocks', 'Rapports', 'Paramètres', 'Mode terrain', 'data-nav-badge="overdue"', 'Gestion des sites', 'site-switch'] as $needle) {
             self::assertStringContainsString($needle, $admin);
         }
-        self::assertLessThan(strpos($admin, '>Maintenance<'), strpos($admin, '>Pilotage<'), 'Pilotage d\'abord pour le management');
+        self::assertLessThan(strpos($admin, '>Maintenance<'), strpos($admin, '>Besoins &amp; achats<'), 'Le flux achats d\'abord pour le management');
 
         $tech = $this->http($this->session($this->createUser('technician', [$this->kamao])), 'GET', '/work-orders')->body;
-        self::assertLessThan(strpos($tech, '>Pilotage<'), strpos($tech, '>Maintenance<'), 'Maintenance d\'abord pour un technicien');
+        self::assertLessThan(strpos($tech, '>Besoins &amp; achats<'), strpos($tech, '>Maintenance<'), 'Maintenance avant les achats pour un technicien');
         self::assertStringNotContainsString('nav__group', $tech, 'Pas de paramètres pour un technicien');
         self::assertStringNotContainsString('site-switch', $tech, 'Un seul site : pas de sélecteur');
     }

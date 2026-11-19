@@ -1633,3 +1633,13 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
 .dot--out_of_service { background: var(--st-out-of-service); }
 .doc-list__item--renewing { border-left-color: var(--st-pending-release); }
 .check-group { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+
+/* Menu : bouton « Nouveau » */
+.sidebar__new { margin: 0 var(--space-3) var(--space-2); }
+.sidebar__new-btn { display: flex; align-items: center; justify-content: center; gap: var(--space-2); width: 100%; min-height: 38px; border: 1px solid rgba(255,255,255,.28); border-radius: var(--radius); background: rgba(255,255,255,.12); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.sidebar__new-btn:hover, .sidebar__new-btn[aria-expanded="true"] { background: rgba(255,255,255,.2); }
+.sidebar__new .menu__list { left: 0; right: 0; z-index: 30; }
+@media (min-width: 900px) {
+  body.sidebar-mini .sidebar__new { margin: 0 var(--space-2) var(--space-2); }
+  body.sidebar-mini .sidebar__new .menu__list { right: auto; min-width: 230px; }
+}

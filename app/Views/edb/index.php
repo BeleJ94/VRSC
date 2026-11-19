@@ -22,6 +22,13 @@ use App\Repositories\PurchaseRepository;
     <form class="filters" data-filters-for="purchase_requests">
         <?= $view->partial('partials/site_filter', ['sites' => $sites, 'selected' => $filters['site_id']]) ?>
         <div class="field">
+            <label for="filter-requester"><?= e(t('edb.requester_filter')) ?></label>
+            <select id="filter-requester" name="requested_by" class="input" data-filter>
+                <option value=""><?= e(t('common.all')) ?></option>
+                <option value="<?= e($currentUser->id) ?>"<?= $filters['mine'] ? ' selected' : '' ?>><?= e(t('nav.my_requests')) ?></option>
+            </select>
+        </div>
+        <div class="field">
             <label for="filter-status"><?= e(t('fields.status')) ?></label>
             <select id="filter-status" name="status" class="input" data-filter>
                 <option value=""><?= e(t('common.all')) ?></option>

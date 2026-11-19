@@ -44,7 +44,8 @@ final class PurchaseController extends Controller
         return $this->render('edb/index', [
             'title' => t('nav.edb'),
             'sites' => $this->sites->listActive(),
-            'filters' => ['site_id' => $this->siteFilter($request), 'status' => $request->string('status'), 'urgency' => $request->string('urgency'), 'category' => $request->string('category')],
+            'filters' => ['site_id' => $this->siteFilter($request), 'status' => $request->string('status'), 'urgency' => $request->string('urgency'), 'category' => $request->string('category'),
+                'mine' => $request->string('mine') === '1'],
             'canCreate' => $this->user()->can('edb.create'),
         ]);
     }

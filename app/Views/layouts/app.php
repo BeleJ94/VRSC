@@ -1,5 +1,5 @@
 <?php
-/** @var \App\Security\CurrentUser $currentUser  @var string $content  @var string $currentPath  @var array $navSites  @var int|null $siteContext */
+/** @var \App\Security\CurrentUser $currentUser  @var string $content  @var string $currentPath  @var array $navSites  @var int|null $siteContext  @var array<string, int> $navCounts */
 $siteIcons = ['office' => 'building-2', 'earthmoving' => 'mountain', 'transport' => 'bus'];
 $siteContext ??= null;
 $contextSite = null;
@@ -8,59 +8,74 @@ foreach ($navSites ?? [] as $navSite) {
         $contextSite = $navSite;
     }
 }
-// Sections métier : [clé, libellé, liens [chemin, icône, libellé, permission, pastille]]
+// Menu organisé selon le flux du cahier des charges : mon travail → besoins & achats → stocks → flotte → maintenance
+// → finance → rapports. Lien : [chemin, icône, libellé, permission] + options
+//   badge (clés d'alarmes, remplies par js), count (compteur « à traiter » calculé côté serveur), sub (sous-lien), blank (nouvel onglet).
+$navCounts ??= [];
 $sections = [
-    'steering' => ['nav.section_steering', [
-        [$contextSite ? '/sites/' . $contextSite['id'] : '/', 'layout-dashboard', $contextSite ? 'nav.site_home' : 'nav.dashboard', 'dashboard.view', null],
-        ['/reports', 'presentation', 'nav.reports', 'reports.view', null],
-        ['/alerts', 'siren', 'nav.alerts', 'dashboard.view', 'wear overuse'],
-        ['/planning', 'calendar-range', 'nav.planning', 'dashboard.view', null],
-        ['/approvals', 'stamp', 'nav.approvals', 'approvals.use', null],
-    ]],
-    'maintenance' => ['nav.section_maintenance', [
-        ['/work-orders', 'clipboard-list', 'nav.work_orders', 'workorder.view', 'overdue'],
-        ['/preventive', 'calendar-clock', 'nav.preventive', 'preventive.view', 'preventive'],
-        ['/meters', 'gauge', 'nav.meters', 'equipment.view', 'meter_soon meter_stale'],
-        ['/meters/screen', 'monitor', 'nav.meters_screen', 'equipment.view', null, true, true],
-        ['/saisie', 'pencil', 'nav.meter_entry', 'meters.entry', null],
-    ]],
-    'fleet' => ['nav.section_fleet', [
-        ['/equipment', 'truck', 'nav.equipment', 'equipment.view', 'down'],
-        ['/fleet-transfers', 'route', 'nav.fleet_transfers', 'fleet.transfer.view', null],
-        ['/fuel', 'fuel', 'nav.fuel', 'fuel.view', null],
-        ['/costs', 'calculator', 'nav.costs', 'costs.view', null],
-        ['/documents', 'file-badge', 'nav.documents', 'equipment.view', 'documents_expired documents_soon'],
-        ['/teams', 'users-round', 'nav.teams', 'personnel.view', null],
-    ]],
-    'stores' => ['nav.section_stores', [
-        ['/stock', 'warehouse', 'nav.stock', 'stock.view', null],
-        ['/stock/transfers', 'arrow-left-right', 'nav.stock_transfers', 'stock.view', null, true],
-        ['/stock/inventories', 'clipboard-check', 'nav.stock_inventories', 'stock.view', null, true],
-        ['/parts', 'package', 'nav.parts', 'parts.view', null],
-        ['/procurement', 'shopping-cart', 'nav.procurement', 'parts.view', 'stock_out stock_low'],
+    'work' => ['nav.section_work', [
+        [$contextSite ? '/sites/' . $contextSite['id'] : '/', 'layout-dashboard', $contextSite ? 'nav.site_home' : 'nav.dashboard', 'dashboard.view'],
+        ['/approvals', 'stamp', 'nav.approvals', 'approvals.use', 'count' => 'approvals'],
+        ['/edb?mine=1', 'inbox', 'nav.my_requests', 'edb.create'],
     ]],
     'purchasing' => ['nav.section_purchasing', [
-        ['/edb', 'file-pen-line', 'nav.edb', 'edb.view', null],
-        ['/purchases', 'receipt-text', 'nav.purchases', 'edb.view', null],
-        ['/edb/reports', 'bar-chart-3', 'nav.edb_reports', 'edb.view', null, true],
+        ['/edb', 'file-pen-line', 'nav.edb', 'edb.view', 'count' => 'edb'],
+        ['/purchases', 'receipt-text', 'nav.purchases', 'edb.view'],
+        ['/references/suppliers', 'handshake', 'nav.suppliers', 'reference.view'],
+    ]],
+    'stores' => ['nav.section_stores', [
+        ['/stock', 'warehouse', 'nav.stock', 'stock.view'],
+        ['/parts', 'package', 'nav.parts', 'parts.view'],
+        ['/stock/transfers', 'arrow-left-right', 'nav.stock_transfers', 'stock.view', 'count' => 'stock_transfers'],
+        ['/stock/inventories', 'clipboard-check', 'nav.stock_inventories', 'stock.view'],
+        ['/procurement', 'shopping-cart', 'nav.procurement', 'parts.view', 'badge' => 'stock_out stock_low'],
+    ]],
+    'fleet' => ['nav.section_fleet', [
+        ['/equipment', 'truck', 'nav.equipment', 'equipment.view', 'badge' => 'down'],
+        ['/fleet-transfers', 'route', 'nav.fleet_transfers', 'fleet.transfer.view', 'count' => 'fleet_transfers'],
+        ['/documents', 'file-badge', 'nav.documents', 'equipment.view', 'badge' => 'documents_expired documents_soon'],
+        ['/fuel', 'fuel', 'nav.fuel', 'fuel.view'],
+        ['/teams', 'users-round', 'nav.teams', 'personnel.view'],
+    ]],
+    'maintenance' => ['nav.section_maintenance', [
+        ['/work-orders', 'clipboard-list', 'nav.work_orders', 'workorder.view', 'badge' => 'overdue'],
+        ['/preventive', 'calendar-clock', 'nav.preventive', 'preventive.view', 'badge' => 'preventive'],
+        ['/planning', 'calendar-range', 'nav.planning', 'workorder.view'],
+        ['/meters', 'gauge', 'nav.meters', 'equipment.view', 'badge' => 'meter_soon meter_stale'],
+        ['/saisie', 'pencil', 'nav.meter_entry', 'meters.entry', 'sub' => true],
+        ['/meters/screen', 'monitor', 'nav.meters_screen', 'equipment.view', 'sub' => true, 'blank' => true],
     ]],
     'finance' => ['nav.section_finance', [
-        ['/finance', 'landmark', 'nav.finance', 'finance.view', null],
-        ['/finance/payments', 'banknote', 'nav.finance_payments', 'finance.view', null, true],
-        ['/finance/invoices', 'file-text', 'nav.finance_invoices', 'finance.view', null, true],
-        ['/finance/cash', 'wallet', 'nav.finance_cash', 'finance.view', null, true],
-        ['/finance/reports', 'pie-chart', 'nav.finance_reports', 'finance.view', null, true],
+        ['/finance', 'landmark', 'nav.finance', 'finance.view'],
+        ['/finance/payments', 'banknote', 'nav.finance_payments', 'finance.view', 'count' => 'payments'],
+        ['/finance/invoices', 'file-text', 'nav.finance_invoices', 'finance.view'],
+        ['/finance/cash', 'wallet', 'nav.finance_cash', 'finance.view'],
+    ]],
+    'reports' => ['nav.section_reports', [
+        ['/reports', 'presentation', 'nav.reports', 'reports.view'],
+        ['/edb/reports', 'bar-chart-3', 'nav.edb_reports', 'edb.view'],
+        ['/costs', 'calculator', 'nav.costs', 'costs.view'],
+        ['/finance/reports', 'pie-chart', 'nav.finance_reports', 'finance.view'],
+        ['/alerts', 'siren', 'nav.alerts', 'costs.view', 'badge' => 'wear overuse'],
     ]],
 ];
-// Ordre adapté au rôle : le technicien commence par la maintenance.
-$order = $currentUser->role->value === 'technician'
-    ? ['maintenance', 'fleet', 'steering', 'stores', 'purchasing', 'finance']
-    : ['steering', 'purchasing', 'finance', 'maintenance', 'fleet', 'stores'];
+// Ordre adapté au métier : chacun trouve d'abord ce qu'il traite tous les jours.
+$orders = [
+    'technician' => ['work', 'maintenance', 'fleet', 'stores', 'purchasing', 'reports', 'finance'],
+    'manager' => ['work', 'maintenance', 'fleet', 'purchasing', 'stores', 'reports', 'finance'],
+    'encoder' => ['work', 'maintenance', 'fleet', 'stores', 'purchasing', 'reports', 'finance'],
+    'storekeeper' => ['work', 'stores', 'purchasing', 'fleet', 'maintenance', 'reports', 'finance'],
+    'buyer' => ['work', 'purchasing', 'stores', 'finance', 'reports', 'fleet', 'maintenance'],
+    'cashier' => ['work', 'finance', 'purchasing', 'reports', 'stores', 'fleet', 'maintenance'],
+    'finance' => ['work', 'finance', 'reports', 'purchasing', 'stores', 'fleet', 'maintenance'],
+    'director' => ['work', 'reports', 'finance', 'purchasing', 'fleet', 'stores', 'maintenance'],
+];
+$order = $orders[$currentUser->role->value] ?? ['work', 'purchasing', 'stores', 'fleet', 'maintenance', 'finance', 'reports'];
 $settings = [
     ['/sites', 'building-2', 'nav.sites_admin', 'sites.manage'],
     ['/users', 'users', 'nav.users', 'users.manage'],
-    ['/catalog', 'tags', 'nav.catalog', 'equipment.manage'],
     ['/references', 'library', 'nav.references', 'reference.view'],
+    ['/catalog', 'tags', 'nav.catalog', 'equipment.manage'],
     ['/delegations', 'user-check', 'nav.delegations', 'delegations.manage'],
     ['/readings', 'book-open', 'nav.readings', 'readings.manage'],
     ['/settings/mail', 'mail', 'nav.mail_settings', 'settings.manage'],
@@ -68,20 +83,40 @@ $settings = [
     ['/backups', 'database-backup', 'nav.backups', 'backups.manage'],
 ];
 $settings = array_values(array_filter($settings, static fn (array $l) => $currentUser->can($l[3])));
-$navLink = static function (array $l) use ($currentPath): string {
-    $isSiteWindow = $l[0] === '/sites' && preg_match('#^/sites/\d+$#', $currentPath);
-    $current = $isSiteWindow ? '' : nav_current($currentPath, $l[0]);
-    // Sous-lien : en retrait ; l'écran mural du suivi des index s'ouvre en plus dans un nouvel onglet.
-    $sub = !empty($l[5]);
-    $blank = !empty($l[6]);
-    // Un sous-lien actif ne doit pas allumer aussi son parent (« /stock » et « /stock/transfers »).
-    if (($l[0] === '/stock' && preg_match('#^/stock/(transfers|inventories)#', $currentPath)) || ($l[0] === '/edb' && str_starts_with($currentPath, '/edb/reports'))
-        || ($l[0] === '/finance' && preg_match('#^/finance/(payments|invoices|cash|reports)#', $currentPath))) {
-        $current = '';
+// Bouton « Nouveau » : les saisies les plus fréquentes, selon les droits.
+$quick = array_values(array_filter([
+    ['/edb/create', 'file-pen-line', 'nav.new_edb', 'edb.create'],
+    ['/work-orders/create', 'clipboard-list', 'nav.new_work_order', 'workorder.create'],
+    ['/fuel/create', 'fuel', 'nav.new_refill', 'fuel.record'],
+    ['/stock/transfers/create', 'arrow-left-right', 'nav.new_stock_transfer', 'stock.transfer'],
+    ['/fleet-transfers/create', 'route', 'nav.new_fleet_transfer', 'fleet.transfer'],
+    ['/finance/payments/create', 'banknote', 'nav.new_payment', 'finance.request'],
+], static fn (array $l) => $currentUser->can($l[3])));
+// Un seul lien allumé : celui dont le chemin est le plus précis (« /stock/transfers » plutôt que « /stock »).
+$navPaths = [];
+foreach ($sections as [, $sectionLinks]) {
+    foreach ($sectionLinks as $l) { $navPaths[] = $l[0]; }
+}
+foreach ($settings as $l) { $navPaths[] = $l[0]; }
+$activePath = '';
+foreach ($navPaths as $path) {
+    if (!str_contains($path, '?') && nav_current($currentPath, $path) !== '' && strlen($path) > strlen($activePath)) {
+        $activePath = $path;
     }
-    return '<li' . ($sub ? ' class="nav__sub"' : '') . '><a href="' . e(url($l[0])) . '"' . $current . ($blank ? ' target="_blank" rel="noopener"' : '') . ' title="' . e(t($l[2])) . '"><i data-lucide="' . e($l[1]) . '"></i>'
+}
+if (preg_match('#^/sites/\d+$#', $currentPath)) {
+    $activePath = $contextSite ? '/sites/' . $contextSite['id'] : '';
+}
+$navLink = static function (array $l) use ($activePath, $navCounts): string {
+    $current = $l[0] === $activePath ? ' aria-current="page"' : '';
+    $count = isset($l['count']) ? (int) ($navCounts[$l['count']] ?? 0) : 0;
+    [$path, $query] = array_pad(explode('?', $l[0], 2), 2, '');
+    parse_str($query, $params);
+
+    return '<li' . (!empty($l['sub']) ? ' class="nav__sub"' : '') . '><a href="' . e(url($path, $params)) . '"' . $current . (!empty($l['blank']) ? ' target="_blank" rel="noopener"' : '') . ' title="' . e(t($l[2])) . '"><i data-lucide="' . e($l[1]) . '"></i>'
         . '<span class="nav__text">' . e(t($l[2])) . '</span>'
-        . (!empty($l[4]) ? '<span class="nav__badge" data-nav-badge="' . e($l[4]) . '" hidden></span>' : '') . '</a></li>';
+        . ($count > 0 ? '<span class="nav__badge nav__badge--warn" title="' . e(t('nav.to_process', ['count' => $count])) . '">' . e($count > 99 ? '99+' : (string) $count) . '</span>' : '')
+        . (!empty($l['badge']) ? '<span class="nav__badge" data-nav-badge="' . e($l['badge']) . '" hidden></span>' : '') . '</a></li>';
 };
 ?>
 <!doctype html>
@@ -115,6 +150,17 @@ $navLink = static function (array $l) use ($currentPath): string {
                 <i data-lucide="chevrons-up-down" class="site-switch__chevron"></i>
             </div>
         </form>
+        <?php endif; ?>
+
+        <?php if ($quick !== []): ?>
+        <div class="menu sidebar__new" data-menu>
+            <button type="button" class="sidebar__new-btn" data-menu-toggle aria-haspopup="true" aria-expanded="false" title="<?= e(t('nav.new')) ?>"><i data-lucide="plus"></i><span class="nav__text"><?= e(t('nav.new')) ?></span></button>
+            <div class="menu__list" role="menu" hidden>
+                <?php foreach ($quick as $q): ?>
+                    <a role="menuitem" href="<?= e(url($q[0])) ?>"><i data-lucide="<?= e($q[1]) ?>"></i><?= e(t($q[2])) ?></a>
+                <?php endforeach; ?>
+            </div>
+        </div>
         <?php endif; ?>
 
         <ul class="nav">
