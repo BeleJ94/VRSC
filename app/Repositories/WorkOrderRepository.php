@@ -324,12 +324,26 @@ final class WorkOrderRepository extends Repository
 
     // --- Intervenants et remarques --------------------------------------------
 
+    /** Prestations externes d'un OT. */
+    public function services(int $workOrderId): array
+    {
+        [$scopeSql, $params] = $this->scope->clause('w.site_id');
+
+        return $this->db->fetchAll(
+            "SELECT sv.*, sup.name AS supplier FROM work_order_services sv
+               JOIN work_orders w ON w.id = sv.work_order_id
+               LEFT JOIN suppliers sup ON sup.id = sv.supplier_id
+              WHERE sv.work_order_id = :wo AND $scopeSql ORDER BY sv.service_date, sv.id",
+            ['wo' => $workOrderId] + $params
+        );
+    }
+
     public function technicians(int $workOrderId): array
     {
         [$scopeSql, $params] = $this->scope->clause('w.site_id');
 
         return $this->db->fetchAll(
-            "SELECT t.id, t.personnel_id, t.minutes, t.created_at, CONCAT(p.first_name, ' ', p.last_name) AS name, p.job, p.phone
+            "SELECT t.id, t.personnel_id, t.minutes, t.created_at, CONCAT(p.first_name, ' ', p.last_name) AS name, p.job, p.phone, p.hourly_rate
                FROM work_order_technicians t
                JOIN work_orders w ON w.id = t.work_order_id
                JOIN personnel p ON p.id = t.personnel_id

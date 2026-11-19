@@ -41,6 +41,7 @@ final class WorkforceService
             'job' => 'required|in:' . implode(',', Workforce::JOBS),
             'phone' => 'string|max:30',
             'license_number' => 'string|max:40',
+            'hourly_rate' => 'numeric|min:0|max:100000',
             'notes' => 'string|max:255',
             'is_active' => 'bool',
         ];

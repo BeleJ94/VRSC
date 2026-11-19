@@ -171,7 +171,23 @@ Cahier des charges § 7 ; fin de la recette R1 (preuve de paiement, le paiement 
 
 Nouveau rôle : Direction générale (`director`).
 
-Lots suivants : carburant et coûts par équipement, compléments flotte, sauvegardes.
+### Carburant et coût mensuel par équipement (lot 6 de la refonte)
+
+Cahier des charges § 8, recette R8.
+
+| Brique | Où | Règles clés |
+|---|---|---|
+| Ravitaillement | `/fuel`, `EquipmentCostService::refill` | bon `RAV-AAAA-n` : engin, date, compteur de suivi obligatoire, litres, bon, responsable ; cuve du site (sortie de stock valorisée au coût moyen) ou station (prix du litre) |
+| Compteurs | idem | index en recul refusé ; saut inhabituel depuis le dernier relevé signalé ; carburant sans évolution du compteur signalé |
+| Coûts | `EquipmentCostRepository::lines` | lus dans les pièces sources, une ligne par pièce : sorties de stock imputées à l'engin (carburant, pièces, lubrifiants, pneus / filtres), pleins en station, temps des intervenants × taux horaire, prestations externes des OT, autres charges, prestations reçues sur EDB |
+| Une seule imputation | idem | un plein à la cuve ne compte que par sa sortie de stock ; un article acheté sur EDB ne compte qu'à sa sortie du magasin |
+| Données manquantes | rapport | montant inconnu = NULL, compté et affiché « manquante » (taux horaire, prix du litre, montant de prestation, relevés de compteur) — jamais zéro |
+| Rapport mensuel | `/costs`, `/costs/{id}` | compteurs début / fin, détail par nature, total, coût par heure ou par km, mois précédent, cumul annuel, consommation L/h ou L/100 km contre la référence (± 20 %), alertes, observations, évolution 12 mois ; classement du plus coûteux au moins coûteux par site et catégorie ; exports Excel / PDF |
+| Validation mensuelle | `/costs` (un site choisi) | rapport figé par site, tracé ; plus de saisie datée dans une période validée |
+
+Ajouts : taux horaire sur la fiche du personnel, prestations externes sur la fiche d'un OT, consommation de référence par modèle ou par engin (`fuel_reference`).
+
+Lots suivants : compléments flotte (fiche équipement, statuts, documents), sauvegardes.
 
 ### Cycle de vie d'un OT et état de l'engin
 

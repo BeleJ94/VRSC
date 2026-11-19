@@ -29,6 +29,7 @@ $back ??= null;
             <?= $f('employee_no', 'text', ['attrs' => ['maxlength' => 30, 'autocapitalize' => 'characters']]) ?>
             <?= $f('phone', 'tel', ['attrs' => ['maxlength' => 30, 'placeholder' => '+243 …', 'inputmode' => 'tel']]) ?>
             <?= $f('license_number', 'text', ['attrs' => ['maxlength' => 40], 'hint' => t('personnel.license_hint')]) ?>
+            <?= $f('hourly_rate', 'number', ['attrs' => ['min' => '0', 'step' => '0.01'], 'hint' => t('personnel.hourly_rate_hint')]) ?>
         </div>
     </fieldset>
     <fieldset class="form-section">

@@ -406,6 +406,74 @@
           { data: 'remaining', title: t('js.finance.remaining'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.remaining, locale); } },
           { data: 'advances', title: t('js.finance.advances'), className: 'dt-right', text: function (r) { return Number(r.advances) ? Core.formatMoney(r.advances, locale) : ''; } }
         ]
+      },
+
+      // Rapport mensuel des coûts par équipement, du plus coûteux au moins coûteux
+      equipment_costs: {
+        order: [[9, 'desc']],
+        columns: [
+          { data: 'code', title: t('fields.equipment_id'), html: function (r) {
+            return '<strong>' + esc(r.code) + '</strong><br><span class="muted">' + esc(r.name) + '</span>';
+          }, text: function (r) { return r.code + ' – ' + r.name; } },
+          { data: 'site', title: t('fields.site_id'), html: function (r) {
+            return esc(r.site) + (r.category ? '<br><span class="muted">' + esc(r.category) + '</span>' : '');
+          }, text: function (r) { return [r.site, r.category].filter(Boolean).join(' – '); } },
+          { data: 'usage_value', title: t('js.costs.usage'), className: 'dt-right', html: function (r) {
+            if (r.usage_value === null || r.usage_value === undefined) return missing(t);
+            return esc(num(r.usage_value)) + ' ' + esc(costUnit(r));
+          }, text: function (r) { return r.usage_value === null || r.usage_value === undefined ? t('js.stock.value_missing') : num(r.usage_value) + ' ' + costUnit(r); } },
+          { data: 'fuel', title: t('js.costs.fuel'), className: 'dt-right', text: function (r) { return money(r.fuel, locale); } },
+          { data: 'parts', title: t('js.costs.parts'), className: 'dt-right', text: function (r) { return money(Number(r.parts) + Number(r.tyres_filters) + Number(r.lubricants), locale); } },
+          { data: 'labor', title: t('js.costs.labor'), className: 'dt-right', text: function (r) { return money(r.labor, locale); } },
+          { data: 'external', title: t('js.costs.external'), className: 'dt-right', text: function (r) { return money(r.external, locale); } },
+          { data: 'other', title: t('js.costs.other'), className: 'dt-right', text: function (r) { return money(r.other, locale); } },
+          { data: 'unit_cost', title: t('js.costs.unit_cost'), className: 'dt-right', text: function (r) {
+            return r.unit_cost === null || r.unit_cost === undefined ? '' : Core.formatMoney(r.unit_cost, locale) + ' / ' + costUnit(r);
+          } },
+          { data: 'total', title: t('js.costs.total'), className: 'dt-right', html: function (r) {
+            return '<strong>' + esc(Core.formatMoney(r.total, locale)) + '</strong>' + (Number(r.missing_count) ? '<br>' + missing(t) : '');
+          }, text: function (r) { return Core.formatMoney(r.total, locale) + (Number(r.missing_count) ? ' (' + t('js.costs.incomplete') + ')' : ''); } },
+          { data: 'prev_total', title: t('js.costs.previous'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.prev_total, locale); } },
+          { data: 'ytd_total', title: t('js.costs.ytd'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.ytd_total, locale); } },
+          { data: 'fuel_ratio', title: t('js.costs.fuel_ratio'), className: 'dt-right', html: function (r) {
+            var out = r.fuel_ratio === null || r.fuel_ratio === undefined ? '' : esc(num(r.fuel_ratio, 2)) + ' ' + esc(r.meter_basis === 'km' ? 'L/100 km' : 'L/h');
+            if (r.fuel_alert) out += '<br><span class="badge badge--breakdown">' + esc(t('js.costs.atypical')) + '</span>';
+            if (Number(r.meter_alert)) out += '<br><span class="badge badge--breakdown">' + esc(t('js.costs.meter')) + '</span>';
+            return out;
+          }, text: function (r) {
+            return (r.fuel_ratio === null || r.fuel_ratio === undefined ? '' : num(r.fuel_ratio, 2) + ' ' + (r.meter_basis === 'km' ? 'L/100 km' : 'L/h'))
+              + (r.fuel_alert ? ' – ' + t('js.costs.atypical') : '') + (Number(r.meter_alert) ? ' – ' + t('js.costs.meter') : '');
+          } }
+        ]
+      },
+
+      // Ravitaillements en carburant
+      fuel_refills: {
+        order: [[0, 'desc']],
+        columns: [
+          { data: 'refill_date', title: t('js.date'), className: 'nowrap', text: function (r) { return date(r.refill_date); } },
+          { data: 'reference', title: t('js.stock.document'), html: function (r) {
+            return '<span class="mono">' + esc(r.reference) + '</span>' + (r.voucher_ref ? '<br><span class="muted">' + esc(r.voucher_ref) + '</span>' : '');
+          }, text: function (r) { return [r.reference, r.voucher_ref].filter(Boolean).join(' – '); } },
+          { data: 'equipment', title: t('fields.equipment_id'), html: function (r) {
+            return '<strong>' + esc(r.equipment) + '</strong><br><span class="muted">' + esc(r.equipment_name) + ' · ' + esc(r.site) + '</span>';
+          }, text: function (r) { return r.equipment + ' – ' + r.equipment_name; } },
+          { data: 'litres', title: t('js.fuel.litres'), className: 'dt-right', text: function (r) { return num(r.litres, 1); } },
+          { data: 'amount', title: t('js.fuel.cost'), className: 'dt-right', html: function (r) {
+            return r.amount === null || r.amount === undefined ? missing(t) : esc(Core.formatMoney(r.amount, locale));
+          }, text: function (r) { return r.amount === null || r.amount === undefined ? t('js.stock.value_missing') : Core.formatMoney(r.amount, locale); } },
+          { data: 'meters', title: t('js.fuel.meter'), orderable: false, html: function (r) {
+            var parts = [];
+            if (r.hour_meter !== null && r.hour_meter !== undefined) parts.push(num(r.hour_meter) + ' h');
+            if (r.odometer_km !== null && r.odometer_km !== undefined) parts.push(num(r.odometer_km) + ' km');
+            return esc(parts.join(' · ')) + (r.meter_alert ? '<br><span class="badge badge--breakdown">' + esc(r.meter_alert) + '</span>' : '');
+          }, text: function (r) {
+            return [r.hour_meter !== null && r.hour_meter !== undefined ? num(r.hour_meter) + ' h' : '', r.odometer_km !== null && r.odometer_km !== undefined ? num(r.odometer_km) + ' km' : '']
+              .filter(Boolean).join(' · ');
+          } },
+          { data: 'source', title: t('js.fuel.origin'), orderable: false, text: function (r) { return r.source === 'stock' ? t('js.fuel.tank') : (r.station || t('js.fuel.station')); } },
+          { data: 'user', title: t('js.user'), orderable: false, text: function (r) { return r.user || ''; } }
+        ]
       }
     };
 
@@ -436,6 +504,20 @@
       });
     });
     return defs;
+  }
+
+  /** Pastille « manquante » : une donnée absente est signalée, jamais affichée comme zéro. */
+  function missing(t) {
+    return '<span class="badge badge--waiting_part">' + Core.escapeHtml(t('js.stock.value_missing')) + '</span>';
+  }
+
+  function money(value, locale) {
+    return Number(value) ? Core.formatMoney(value, locale) : '';
+  }
+
+  /** Unité d'usage d'un engin selon son compteur de suivi. */
+  function costUnit(r) {
+    return r.meter_basis === 'km' ? 'km' : 'h';
   }
 
   /** Libellé d'une ligne de l'état des dépenses : une catégorie est traduite, les autres dimensions sont des noms. */

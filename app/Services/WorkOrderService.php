@@ -360,6 +360,46 @@ final class WorkOrderService
         });
     }
 
+    /**
+     * Prestation externe rattachée à l'OT (atelier, dépannage, expertise…). Un montant inconnu reste « manquant »
+     * dans le coût de l'engin : il n'est jamais remplacé par zéro.
+     */
+    public function addService(int $id, array $input): int
+    {
+        $data = Validator::validate($input, [
+            'description' => 'required|string|max:190',
+            'service_date' => 'date',
+            'amount' => 'numeric|min:0.01|max:100000000000',
+            'supplier_id' => 'int',
+            'document_ref' => 'string|max:60',
+        ]);
+        $data['service_date'] ??= date('Y-m-d');
+        if ($data['service_date'] > date('Y-m-d')) {
+            throw Validator::fail('service_date', 'stock_future');
+        }
+
+        return $this->db->transaction(function () use ($id, $data): int {
+            $wo = $this->workOrders->findForUpdate($id) ?? throw HttpException::notFound();
+            $this->assertCanExecute($wo);
+            if ($wo['status'] === WorkOrderStatus::Cancelled->value) {
+                throw Validator::fail('status', 'closed');
+            }
+            if ($this->db->fetchValue('SELECT 1 FROM equipment_cost_periods WHERE site_id = :s AND period = :p', ['s' => $wo['site_id'], 'p' => substr($data['service_date'], 0, 7)])) {
+                throw Validator::fail('service_date', 'cost_period_closed', ['period' => substr($data['service_date'], 0, 7)]);
+            }
+            if ($data['supplier_id'] !== null && !$this->db->fetchValue('SELECT 1 FROM suppliers WHERE id = :id', ['id' => $data['supplier_id']])) {
+                throw Validator::fail('supplier_id', 'exists');
+            }
+            $serviceId = $this->db->insert(
+                'INSERT INTO work_order_services (work_order_id, supplier_id, description, service_date, amount, document_ref, created_by) VALUES (:w, :s, :d, :dt, :a, :r, :u)',
+                ['w' => $id, 's' => $data['supplier_id'], 'd' => $data['description'], 'dt' => $data['service_date'], 'a' => $data['amount'], 'r' => $data['document_ref'], 'u' => $this->auth->user()?->id]
+            );
+            $this->logger->log('service_add', 'work_order', $id, (int) $wo['site_id'], null, $data, $wo['reference'] . ' : ' . $data['description']);
+
+            return $serviceId;
+        });
+    }
+
     /** Remarque / commentaire de maintenancier (possible aussi après clôture : retour d'expérience). */
     public function addComment(int $id, array $input): int
     {

@@ -120,8 +120,8 @@ final class PersonnelRepository extends Repository
         $this->scope->assertAllows((int) $data['site_id']);
 
         return $this->db->insert(
-            'INSERT INTO personnel (site_id, team_id, employee_no, first_name, last_name, job, phone, license_number, notes, is_active)
-             VALUES (:site_id, :team_id, :employee_no, :first_name, :last_name, :job, :phone, :license_number, :notes, :is_active)',
+            'INSERT INTO personnel (site_id, team_id, employee_no, first_name, last_name, job, phone, license_number, hourly_rate, notes, is_active)
+             VALUES (:site_id, :team_id, :employee_no, :first_name, :last_name, :job, :phone, :license_number, :hourly_rate, :notes, :is_active)',
             self::params($data)
         );
     }
@@ -132,7 +132,7 @@ final class PersonnelRepository extends Repository
         [$scopeSql, $params] = $this->scope->clause('site_id');
         $this->db->execute(
             "UPDATE personnel SET site_id = :site_id, team_id = :team_id, employee_no = :employee_no, first_name = :first_name,
-                    last_name = :last_name, job = :job, phone = :phone, license_number = :license_number, notes = :notes,
+                    last_name = :last_name, job = :job, phone = :phone, license_number = :license_number, hourly_rate = :hourly_rate, notes = :notes,
                     is_active = :is_active
               WHERE id = :id AND $scopeSql",
             self::params($data) + ['id' => $id] + $params
@@ -150,6 +150,7 @@ final class PersonnelRepository extends Repository
             'job' => $data['job'],
             'phone' => $data['phone'] ?? null,
             'license_number' => $data['license_number'] ?? null,
+            'hourly_rate' => $data['hourly_rate'] ?? null,
             'notes' => $data['notes'] ?? null,
             'is_active' => !empty($data['is_active']) ? 1 : 0,
         ];

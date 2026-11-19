@@ -25,7 +25,9 @@ const REPOSITORIES = {
   stock_journal: 'StockLedgerRepository',
   purchase_requests: 'PurchaseRepository',
   purchase_execution: 'PurchaseRepository',
-  finance_summary: 'FinanceRepository'
+  finance_summary: 'FinanceRepository',
+  equipment_costs: 'EquipmentCostRepository',
+  fuel_refills: 'EquipmentCostRepository'
 };
 
 test('chaque tableau a un repository et chaque colonne triable est dans sa liste blanche PHP', () => {
@@ -75,7 +77,11 @@ test('le rendu HTML échappe les données utilisateur', () => {
     purchase_execution: { reference: evil, subject: evil, approved_at: '2026-01-05 10:00:00', executed_at: null, delay_days: null, estimated_amount: 10,
       engaged_amount: 5, received_value: 2, remaining_amount: 8, qty_remaining: 3, qty_satisfied: 1, qty_requested: 4, stage: 'delivery',
       display_status: 'partial', age_days: 12, requester: evil, site: evil, orders: evil, proofs: evil, paid_amount: 1 },
-    finance_summary: { label: evil, requested: 1, approved: 1, engaged: 1, paid: 1, remaining: 0, advances: 0 }
+    finance_summary: { label: evil, requested: 1, approved: 1, engaged: 1, paid: 1, remaining: 0, advances: 0 },
+    equipment_costs: { code: evil, name: evil, site: evil, category: evil, meter_basis: 'hours', usage_value: null, fuel: 1, parts: 2, tyres_filters: 1, lubricants: 1,
+      labor: 0, external: 3, other: 0, total: 8, missing_count: 1, unit_cost: null, prev_total: 2, ytd_total: 10, fuel_ratio: 1.5, fuel_alert: 'over', meter_alert: 1 },
+    fuel_refills: { refill_date: '2026-01-05', reference: evil, voucher_ref: evil, equipment: evil, equipment_name: evil, site: evil, litres: 10, amount: null,
+      hour_meter: 100, odometer_km: null, meter_alert: evil, source: 'external', station: evil, user: evil }
   };
   for (const [name, def] of Object.entries(defs)) {
     for (const col of def.columns) {

@@ -16,6 +16,7 @@ use App\Controllers\CatalogController;
 use App\Controllers\DashboardController;
 use App\Controllers\DocumentController;
 use App\Controllers\EquipmentController;
+use App\Controllers\EquipmentCostController;
 use App\Controllers\FieldController;
 use App\Controllers\FinanceController;
 use App\Controllers\FleetTransferController;
@@ -92,6 +93,7 @@ return static function (Router $r): void {
     $r->post('/work-orders/{id}/technicians', [WorkOrderController::class, 'addTechnician'], ['permission' => 'workorder.execute']);
     $r->post('/work-orders/{id}/technicians/{technicianId}/delete', [WorkOrderController::class, 'removeTechnician'], ['permission' => 'workorder.execute']);
     $r->post('/work-orders/{id}/comments', [WorkOrderController::class, 'comment'], ['permission' => 'workorder.execute']);
+    $r->post('/work-orders/{id}/services', [WorkOrderController::class, 'addService'], ['permission' => 'workorder.execute']);
 
     // Maintenance préventive
     $r->get('/preventive', [PreventiveController::class, 'index'], ['permission' => 'preventive.view']);
@@ -204,6 +206,18 @@ return static function (Router $r): void {
     $r->get('/finance/reports', [FinanceController::class, 'reports'], ['permission' => 'finance.view']);
     $r->get('/finance/reports/data', [FinanceController::class, 'reportsData'], ['permission' => 'finance.view']);
     $r->get('/finance/reconciliation', [FinanceController::class, 'reconciliation'], ['permission' => 'finance.view']);
+
+    // Carburant (ravitaillements) et coût mensuel par équipement
+    $r->get('/fuel', [EquipmentCostController::class, 'fuel'], ['permission' => 'fuel.view']);
+    $r->get('/fuel/data', [EquipmentCostController::class, 'fuelData'], ['permission' => 'fuel.view']);
+    $r->get('/fuel/create', [EquipmentCostController::class, 'createRefill'], ['permission' => 'fuel.record']);
+    $r->post('/fuel', [EquipmentCostController::class, 'storeRefill'], ['permission' => 'fuel.record']);
+    $r->get('/costs', [EquipmentCostController::class, 'index'], ['permission' => 'costs.view']);
+    $r->get('/costs/data', [EquipmentCostController::class, 'data'], ['permission' => 'costs.view']);
+    $r->post('/costs/close', [EquipmentCostController::class, 'close'], ['permission' => 'costs.close']);
+    $r->post('/costs/charges', [EquipmentCostController::class, 'storeCharge'], ['permission' => 'costs.charge']);
+    $r->get('/costs/{id}', [EquipmentCostController::class, 'show'], ['permission' => 'costs.view']);
+    $r->post('/costs/{id}/note', [EquipmentCostController::class, 'note'], ['permission' => 'costs.charge']);
 
     // Mes validations (circuit d'approbation)
     $r->get('/approvals', [ApprovalController::class, 'index'], ['permission' => 'approvals.use']);

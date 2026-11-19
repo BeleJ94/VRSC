@@ -95,6 +95,7 @@ if ($wo['completed_at']) {
     </div>
     <div>
         <?= $view->partial('work_orders/_crew', ['wo' => $wo, 'technicians' => $technicians, 'maintenanceStaff' => $maintenanceStaff, 'canExecute' => $canExecute, 'back' => 'desktop']) ?>
+        <?= $view->partial('work_orders/_services', ['wo' => $wo, 'services' => $services ?? [], 'canAddService' => $canAddService ?? false]) ?>
 
         <section class="card">
             <div class="card__title"><h2><?= e(t('work_orders.parts')) ?></h2></div>

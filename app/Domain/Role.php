@@ -80,6 +80,12 @@ enum Role: string
         'finance.request' => ['admin', 'finance', 'buyer', 'logistics', 'requester', 'supervisor', 'manager'],
         'finance.pay' => ['admin', 'cashier'],
         'cash.manage' => ['admin', 'cashier', 'finance'],
+        // Carburant et coût mensuel par équipement
+        'fuel.view' => ['admin', 'manager', 'technician', 'viewer', 'logistics', 'storekeeper', 'finance', 'director', 'supervisor'],
+        'fuel.record' => ['admin', 'manager', 'technician', 'storekeeper', 'encoder'],
+        'costs.view' => ['admin', 'manager', 'viewer', 'logistics', 'finance', 'director', 'supervisor'],
+        'costs.charge' => ['admin', 'manager', 'finance'],
+        'costs.close' => ['admin', 'finance', 'logistics'],
         'parts.manage' => ['admin', 'manager'],
         'field.use' => ['admin', 'manager', 'technician'],
         'personnel.view' => ['admin', 'manager', 'technician', 'viewer'],
