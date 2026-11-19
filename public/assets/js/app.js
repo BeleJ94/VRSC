@@ -802,6 +802,15 @@
     }).catch(function () { alertError(); });
   });
 
+  // Document métier en PDF (ordre de transfert et sa check-list) : contenu de la page, mise en page PMDoc.
+  $(document).on('click', '[data-doc-pdf]', function () {
+    var payload = readJson('doc-data');
+    if (!window.PMDoc || !payload.reference) return alertError();
+    loadPdfMake().then(function (pdfMake) {
+      Exporter.downloadPdf(pdfMake, window.PMDoc.definition(payload), Core.exportFileName(payload.reference, 'pdf'));
+    }).catch(function () { alertError(); });
+  });
+
   // Aperçu du bon de travail : PDF affiché dans une modale, puis téléchargement ou impression.
   $(document).on('click', '[data-wo-preview]', function () {
     var payload = readJson('wo-data');

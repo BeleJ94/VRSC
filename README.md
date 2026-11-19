@@ -135,7 +135,24 @@ Cahier des charges § 6 et § 5.1, recette R1 (hors paiement, traité au lot Fin
 | Reste chez le fournisseur | `/purchases#outstanding` | commandé − reçu, valeur et retard par ligne |
 | Rapports mensuels | `/edb/reports` | 1. EDB émis, 2. approuvés exécutés, 3. approuvés non intégralement exécutés ; soldes d'ouverture / clôture, nouveaux, annulés, taux d'exécution en nombre et en valeur ; filtres ; exports Excel / PDF |
 
-Lots suivants : transferts d'engins (OTV), finance / caisse, carburant et coûts par équipement.
+### Transferts d'engins entre sites (lot 4 de la refonte)
+
+Cahier des charges § 4, recette R3 et R4.
+
+| Brique | Où | Règles clés |
+|---|---|---|
+| Demande | `/fleet-transfers/create`, `FleetTransferService::request` | motivée, émise par l'origine ou la destination ; numéro `OTV-AAAA-n` ; un seul transfert en cours par engin ; conditions de porte-char obligatoires ; documents de bord repris sur l'ordre |
+| Circuit | `ApprovalService` (`fleet_transfer`) | avis hiérarchique (consultatif) → contrôle technique → autorisation Direction Logistique : trois actes distincts ; le contrôle ne se valide que par la check-list (technicien ou responsable maintenance) |
+| Check-list | `fleet_transfer_checks` | 12 points (conforme / réserve / non conforme / non applicable), compteur, photos, conclusion apte / apte sous conditions / inapte ; tous les contrôles sont conservés |
+| Inapte | `FleetTransferService::depart` | « inapte » n'avance pas le circuit et bloque le départ, même après autorisation, jusqu'à un nouveau contrôle favorable |
+| Départ | fiche du transfert | autorisation exigée ; compteur, carburant, remise au conducteur ou transporteur ; l'engin reste affecté à l'origine pendant le trajet |
+| Réception | fiche du transfert | par le site de destination et une autre personne ; procès-verbal point par point, écarts à décrire ; l'engin change de site ici seulement (`equipment_site_history`) |
+| PDF | bouton « OTV et check-list (PDF) », `pm-doc.js` | ordre de transfert et check-list sous le même numéro, avec visas et zones de signature |
+| Suivi | `/fleet-transfers` | en attente d'avis, de contrôle, d'autorisation, de départ, de réception ; retards, écarts, durée de trajet |
+
+La fiche engin ne permet plus de modifier le site : il change uniquement à la réception d'un ordre de transfert.
+
+Lots suivants : finance / caisse, carburant et coûts par équipement.
 
 ### Cycle de vie d'un OT et état de l'engin
 

@@ -9,13 +9,15 @@ if ($approval === null) {
 }
 $statusBadge = ['pending' => 'waiting_part', 'approved' => 'available', 'rejected' => 'breakdown', 'cancelled' => 'neutral'];
 $pending = $approval['status'] === 'pending';
-$role = $pending ? \App\Domain\Role::tryFrom((string) $approval['step_role']) : null;
+$stepRoleLabels = $pending ? implode(' / ', array_map(static fn (\App\Domain\Role $r): string => t($r->labelKey()), \App\Services\ApprovalService::stepRoles((string) $approval['step_role']))) : '';
+// Étape validée ailleurs que par ce formulaire (ex. contrôle technique d'un transfert : par la check-list).
+$externalStep = $pending && in_array($approval['entity_type'] . ':' . $approval['step_code'], \App\Services\ApprovalWorkflow::EXTERNAL_STEPS, true);
 $siteId = (int) $approval['site_id'];
 $isRequester = (int) ($approval['requested_by'] ?? 0) === $currentUser->id;
-$holds = $role !== null && $currentUser->holds($role, $siteId) !== null;
+$holds = $pending && \App\Services\ApprovalService::held($currentUser, (string) $approval['step_role'], $siteId) !== null;
 $alreadyActed = in_array($currentUser->id, array_map('intval', array_column($approval['actions'], 'acted_by')), true);
 $canOverride = $currentUser->canAt('approvals.override', $siteId);
-$canAct = $pending && !$isRequester && $currentUser->can('approvals.use') && (($holds && !$alreadyActed) || $canOverride);
+$canAct = $pending && !$externalStep && !$isRequester && $currentUser->can('approvals.use') && (($holds && !$alreadyActed) || $canOverride);
 $needsOverride = $canAct && (!$holds || $alreadyActed);
 ?>
 <section class="card" id="approval">
@@ -61,7 +63,7 @@ $needsOverride = $canAct && (!$holds || $alreadyActed);
     <?php endif; ?>
 
     <?php if ($pending): ?>
-        <p><?= e(t('approvals.waiting', ['step' => $approval['step_name'], 'role' => t('role.' . $approval['step_role'])])) ?></p>
+        <p><?= e(t('approvals.waiting', ['step' => $approval['step_name'], 'role' => $stepRoleLabels])) ?></p>
         <?php if ($isRequester): ?>
             <p class="muted small"><?= e(t('validation.approval_own_request')) ?></p>
         <?php endif; ?>

@@ -69,6 +69,7 @@ final class EquipmentService
 
         return $this->db->transaction(function () use ($data): int {
             $id = $this->equipment->create($data);
+            $this->db->execute('INSERT INTO equipment_site_history (equipment_id, site_id, started_at) VALUES (:e, :s, NOW())', ['e' => $id, 's' => $data['site_id']]);
             $this->equipment->addStatusHistory($id, null, EquipmentStatus::Available->value, null, null, $this->auth->user()?->id);
             $this->logger->log('create', 'equipment', $id, $data['site_id'], null, $data, $data['code'] . ' – ' . $data['name']);
 
@@ -89,6 +90,10 @@ final class EquipmentService
 
         $this->db->transaction(function () use ($id, $data): void {
             $before = $this->equipment->findForUpdate($id) ?? throw HttpException::notFound();
+            if ((int) $before['site_id'] !== (int) $data['site_id']) {
+                // Le changement d'affectation passe par un ordre de transfert réceptionné à destination.
+                throw Validator::fail('site_id', 'site_via_transfer');
+            }
             $this->equipment->update($id, $data);
             $after = $this->equipment->findForUpdate($id);
             $this->logger->log('update', 'equipment', $id, $data['site_id'], $before, $after, $data['code']);

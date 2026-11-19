@@ -29,6 +29,7 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
         <p class="eq-hero__name"><?= e(trim(($item['brand'] ?? '') . ' ' . ($item['model'] ?? ''))) ?: e($item['name']) ?> <span class="muted">· <?= e($item['name']) ?></span></p>
         <div class="eq-hero__tags">
             <a class="tag" href="<?= e(url('/sites/' . $item['site_id'])) ?>"><i data-lucide="map-pin"></i><?= e($item['site']) ?></a>
+            <?php if ($currentUser->can('fleet.transfer.view')): ?><a class="tag" href="<?= e(url($currentUser->can('fleet.transfer') ? '/fleet-transfers/create' : '/fleet-transfers', $currentUser->can('fleet.transfer') ? ['equipment_id' => $item['id']] : [])) ?>"><i data-lucide="route"></i><?= e(t('fleet.transfer_link')) ?></a><?php endif; ?>
             <?php if ($item['category']): ?><span class="tag"><i data-lucide="layers"></i><?= e($item['category']) ?></span><?php endif; ?>
             <?php if ($item['plate_number']): ?><span class="tag tag--plate"><?= e($item['plate_number']) ?></span><?php endif; ?>
             <span class="tag"><i data-lucide="clock"></i><?= e(t('equipment.since', ['date' => format_date($item['status_changed_at'], true)])) ?></span>

@@ -44,7 +44,7 @@ final class ApprovalService
     public function defineFlow(string $code, string $name, array $steps): int
     {
         foreach ($steps as $step) {
-            if (Role::tryFrom($step['role']) === null) {
+            if (self::stepRoles((string) $step['role']) === []) {
                 throw new \InvalidArgumentException("Rôle inconnu pour l'étape {$step['code']} : {$step['role']}");
             }
         }
@@ -57,9 +57,9 @@ final class ApprovalService
      *
      * @return array{id: int, status: string} status = approved si aucune étape ne s'applique (montant sous les seuils)
      */
-    public function start(string $flowCode, string $entityType, int $entityId, int $siteId, ?float $amount = null, ?string $reference = null): array
+    public function start(string $flowCode, string $entityType, int $entityId, int $siteId, ?float $amount = null, ?string $reference = null, bool $trusted = false): array
     {
-        return $this->db->transaction(function () use ($flowCode, $entityType, $entityId, $siteId, $amount, $reference): array {
+        return $this->db->transaction(function () use ($flowCode, $entityType, $entityId, $siteId, $amount, $reference, $trusted): array {
             $flow = $this->approvals->flowByCode($flowCode) ?? throw new \RuntimeException("Circuit d'approbation non paramétré : $flowCode");
             $first = $this->nextStep((int) $flow['id'], 0, $amount);
             $status = $first === null ? 'approved' : 'pending';
@@ -74,7 +74,7 @@ final class ApprovalService
                 'current_step_id' => $first !== null ? (int) $first['id'] : null,
                 'requested_by' => $this->auth->user()?->id,
                 'closed_at' => $first === null ? date('Y-m-d H:i:s') : null,
-            ]);
+            ], !$trusted);
             $this->logger->log('approval_request', $entityType, $entityId, $siteId, null,
                 ['flow' => $flowCode, 'amount' => $amount, 'status' => $status], $reference);
 
@@ -184,9 +184,13 @@ final class ApprovalService
         return $request === null ? null : $request + ['actions' => $this->approvals->actions($requestId)];
     }
 
-    public function forEntity(string $entityType, int $entityId): ?array
+    /**
+     * @param bool $trusted true quand l'appelant a déjà vérifié que l'utilisateur voit le document
+     *                      (ex. transfert visible depuis le site de destination alors que la demande est rattachée à l'origine)
+     */
+    public function forEntity(string $entityType, int $entityId, bool $trusted = false): ?array
     {
-        $request = $this->approvals->latestForEntity($entityType, $entityId);
+        $request = $this->approvals->latestForEntity($entityType, $entityId, !$trusted);
 
         return $request === null ? null : $request + ['actions' => $this->approvals->actions((int) $request['id'])];
     }
@@ -203,8 +207,7 @@ final class ApprovalService
         }
         $out = [];
         foreach ($this->approvals->pending() as $request) {
-            $role = Role::tryFrom((string) $request['step_role']);
-            if ($role === null || $user->holds($role, (int) $request['site_id']) === null) {
+            if (self::held($user, (string) $request['step_role'], (int) $request['site_id']) === null) {
                 continue;
             }
             if ($request['requested_by'] !== null && (int) $request['requested_by'] === $user->id) {
@@ -226,8 +229,7 @@ final class ApprovalService
      */
     private function authority(CurrentUser $user, array $step, int $siteId, int $requestId, ?string $overrideReason): array
     {
-        $role = Role::tryFrom((string) $step['role']);
-        $assignment = $role !== null ? $user->holds($role, $siteId) : null;
+        $assignment = self::held($user, (string) $step['role'], $siteId);
         $repeated = $this->alreadyActed($requestId, $user->id);
         if ($assignment !== null && !$repeated) {
             return [$assignment, false];
@@ -241,6 +243,39 @@ final class ApprovalService
         }
 
         return [$assignment, true];
+    }
+
+    /**
+     * Rôles d'une étape : un rôle, ou plusieurs séparés par une virgule (« technician,manager »).
+     *
+     * @return list<Role>
+     */
+    public static function stepRoles(string $roles): array
+    {
+        $out = [];
+        foreach (explode(',', $roles) as $code) {
+            $role = Role::tryFrom(trim($code));
+            if ($role !== null) {
+                $out[] = $role;
+            }
+        }
+
+        return $out;
+    }
+
+    /** Habilitation de l'utilisateur pour l'un des rôles de l'étape (en propre de préférence). */
+    public static function held(CurrentUser $user, string $roles, int $siteId): ?array
+    {
+        $found = null;
+        foreach (self::stepRoles($roles) as $role) {
+            $assignment = $user->holds($role, $siteId);
+            if ($assignment !== null && $assignment['delegated_from'] === null) {
+                return $assignment;
+            }
+            $found ??= $assignment;
+        }
+
+        return $found;
     }
 
     private function alreadyActed(int $requestId, int $userId): bool

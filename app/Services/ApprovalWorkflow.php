@@ -19,13 +19,18 @@ final class ApprovalWorkflow
         StockTransferService::ENTITY => StockTransferService::class,
         StockInventoryService::ENTITY => StockInventoryService::class,
         PurchaseRequestService::ENTITY => PurchaseRequestService::class,
+        FleetTransferService::ENTITY => FleetTransferService::class,
     ];
+
+    /** Étapes « type:code » qui ne se valident pas par le formulaire générique mais par un acte métier (check-list). */
+    public const EXTERNAL_STEPS = [FleetTransferService::ENTITY . ':control'];
 
     /** Type d'entité → page du document. */
     private const PAGES = [
         StockTransferService::ENTITY => '/stock/transfers/',
         StockInventoryService::ENTITY => '/stock/inventories/',
         PurchaseRequestService::ENTITY => '/edb/',
+        FleetTransferService::ENTITY => '/fleet-transfers/',
     ];
 
     public function __construct(
@@ -36,10 +41,14 @@ final class ApprovalWorkflow
     }
 
     /** @return array{status: string, step: string, next_step: string|null, entity_type: string, entity_id: int} */
-    public function act(int $requestId, array $input): array
+    /** @param bool $fromBusinessAct true quand l'acte vient du service métier de l'étape (ex. check-list du contrôle technique) */
+    public function act(int $requestId, array $input, bool $fromBusinessAct = false): array
     {
-        return $this->db->transaction(function () use ($requestId, $input): array {
+        return $this->db->transaction(function () use ($requestId, $input, $fromBusinessAct): array {
             $request = $this->approvals->detail($requestId) ?? throw HttpException::notFound();
+            if (!$fromBusinessAct && in_array($request['entity_type'] . ':' . $request['step_code'], self::EXTERNAL_STEPS, true)) {
+                throw \App\Core\Validator::fail('decision', 'approval_external_step');
+            }
             $result = $this->approvals->act($requestId, $input);
             if ($result['status'] !== 'pending') {
                 $this->apply((string) $request['entity_type'], (int) $request['entity_id'], $result['status']);

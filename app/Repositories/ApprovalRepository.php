@@ -45,9 +45,11 @@ final class ApprovalRepository extends Repository
         return $flowId;
     }
 
-    public function createRequest(array $data): int
+    public function createRequest(array $data, bool $checkScope = true): int
     {
-        $this->scope->assertAllows((int) $data['site_id']);
+        if ($checkScope) {
+            $this->scope->assertAllows((int) $data['site_id']);
+        }
 
         return $this->db->insert(
             'INSERT INTO approval_requests (flow_id, entity_type, entity_id, site_id, reference, amount, status, current_step_id, requested_by, closed_at)
@@ -67,9 +69,9 @@ final class ApprovalRepository extends Repository
         );
     }
 
-    public function find(int $id): ?array
+    public function find(int $id, bool $checkScope = true): ?array
     {
-        [$scopeSql, $params] = $this->scope->clause('r.site_id');
+        [$scopeSql, $params] = $checkScope ? $this->scope->clause('r.site_id') : ['1=1', []];
 
         return $this->db->fetchOne(
             "SELECT r.*, f.code AS flow_code, f.name AS flow_name, s.name AS site, st.code AS step_code, st.name AS step_name,
@@ -86,14 +88,14 @@ final class ApprovalRepository extends Repository
     }
 
     /** Dernière demande ouverte ou close d'une transaction. */
-    public function latestForEntity(string $entityType, int $entityId): ?array
+    public function latestForEntity(string $entityType, int $entityId, bool $checkScope = true): ?array
     {
         $id = $this->db->fetchValue(
             'SELECT id FROM approval_requests WHERE entity_type = :t AND entity_id = :e ORDER BY id DESC LIMIT 1',
             ['t' => $entityType, 'e' => $entityId]
         );
 
-        return $id === null ? null : $this->find((int) $id);
+        return $id === null ? null : $this->find((int) $id, $checkScope);
     }
 
     public function step(int $stepId): ?array

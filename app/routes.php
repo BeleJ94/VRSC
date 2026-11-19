@@ -17,6 +17,7 @@ use App\Controllers\DashboardController;
 use App\Controllers\DocumentController;
 use App\Controllers\EquipmentController;
 use App\Controllers\FieldController;
+use App\Controllers\FleetTransferController;
 use App\Controllers\ManagementController;
 use App\Controllers\MeterController;
 use App\Controllers\MeterEntryController;
@@ -172,6 +173,16 @@ return static function (Router $r): void {
     $r->get('/purchases/{id}', [PurchaseController::class, 'order'], ['permission' => 'edb.view']);
     $r->post('/purchases/{id}/receive', [PurchaseController::class, 'receive'], ['permission' => 'stock.move']);
     $r->post('/purchases/{id}/cancel', [PurchaseController::class, 'cancelOrder'], ['permission' => 'purchase.manage']);
+
+    // Transferts d'engins entre sites : demande, check-list technique, OTV, départ, procès-verbal de réception
+    $r->get('/fleet-transfers', [FleetTransferController::class, 'index'], ['permission' => 'fleet.transfer.view']);
+    $r->get('/fleet-transfers/create', [FleetTransferController::class, 'create'], ['permission' => 'fleet.transfer']);
+    $r->post('/fleet-transfers', [FleetTransferController::class, 'store'], ['permission' => 'fleet.transfer']);
+    $r->get('/fleet-transfers/{id}', [FleetTransferController::class, 'show'], ['permission' => 'fleet.transfer.view']);
+    $r->post('/fleet-transfers/{id}/check', [FleetTransferController::class, 'check'], ['permission' => 'fleet.check']);
+    $r->post('/fleet-transfers/{id}/depart', [FleetTransferController::class, 'depart'], ['permission' => 'fleet.dispatch']);
+    $r->post('/fleet-transfers/{id}/receive', [FleetTransferController::class, 'receive'], ['permission' => 'fleet.dispatch']);
+    $r->post('/fleet-transfers/{id}/cancel', [FleetTransferController::class, 'cancel'], ['permission' => 'fleet.transfer']);
 
     // Mes validations (circuit d'approbation)
     $r->get('/approvals', [ApprovalController::class, 'index'], ['permission' => 'approvals.use']);

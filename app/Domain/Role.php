@@ -67,6 +67,11 @@ enum Role: string
         'edb.view' => ['admin', 'manager', 'viewer', ...self::VRSC],
         'edb.create' => ['admin', 'manager', 'technician', 'requester', 'supervisor', 'storekeeper'],
         'purchase.manage' => ['admin', 'buyer', 'logistics'],
+        // Transferts d'engins entre sites : demande, contrôle technique (check-list), départ et réception
+        'fleet.transfer.view' => ['admin', 'manager', 'technician', 'viewer', ...self::VRSC],
+        'fleet.transfer' => ['admin', 'manager', 'supervisor', 'logistics', 'requester'],
+        'fleet.check' => ['admin', 'manager', 'technician'],
+        'fleet.dispatch' => ['admin', 'manager', 'supervisor', 'logistics'],
         'parts.manage' => ['admin', 'manager'],
         'field.use' => ['admin', 'manager', 'technician'],
         'personnel.view' => ['admin', 'manager', 'technician', 'viewer'],
