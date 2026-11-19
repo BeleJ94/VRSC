@@ -24,7 +24,7 @@ final class MailService
     private const PREFIX = 'mail.';
     private const DEFAULTS = [
         'host' => null, 'port' => '587', 'encryption' => 'tls', 'username' => null, 'password' => null,
-        'from_address' => null, 'from_name' => 'PerfectMaint', 'recipients' => null, 'alerts_enabled' => '0', 'app_url' => null,
+        'from_address' => null, 'from_name' => 'ETHAN VRSC', 'recipients' => null, 'alerts_enabled' => '0', 'app_url' => null,
     ];
 
     public function __construct(
@@ -282,6 +282,6 @@ final class MailService
     {
         return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1B2430;max-width:720px">'
             . '<h2 style="margin:0 0 12px;font-size:18px;color:#1F4E79">' . self::h($title) . '</h2>' . $body
-            . '<p style="margin-top:24px;font-size:12px;color:#5B6573">PerfectMaint</p></div>';
+            . '<p style="margin-top:24px;font-size:12px;color:#5B6573">ETHAN VRSC</p></div>';
     }
 }

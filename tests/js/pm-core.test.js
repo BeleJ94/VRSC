@@ -63,7 +63,7 @@ test('filtersFromEntries ignore les valeurs vides', () => {
 
 test('exportFileName : nom sûr et daté', () => {
   const d = new Date(2026, 8, 4);
-  assert.equal(Core.exportFileName('Ordres de travail', 'xlsx', d), 'perfectmaint-ordres-de-travail-20260904.xlsx');
-  assert.equal(Core.exportFileName('../../etc/passwd', 'pdf', d), 'perfectmaint-etc-passwd-20260904.pdf');
-  assert.equal(Core.exportFileName('', 'pdf', d), 'perfectmaint-export-20260904.pdf');
+  assert.equal(Core.exportFileName('Ordres de travail', 'xlsx', d), 'ethan-vrsc-ordres-de-travail-20260904.xlsx');
+  assert.equal(Core.exportFileName('../../etc/passwd', 'pdf', d), 'ethan-vrsc-etc-passwd-20260904.pdf');
+  assert.equal(Core.exportFileName('', 'pdf', d), 'ethan-vrsc-export-20260904.pdf');
 });

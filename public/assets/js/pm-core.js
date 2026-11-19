@@ -1,5 +1,5 @@
 /*
- * PerfectMaint — fonctions utilitaires pures (navigateur + Node pour les tests).
+ * ETHAN VRSC — fonctions utilitaires pures (navigateur + Node pour les tests).
  * Aucune dépendance au DOM ici.
  */
 (function (root, factory) {
@@ -136,7 +136,7 @@
     var slug = String(title || 'export')
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'export';
-    return 'perfectmaint-' + slug + '-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.' + extension;
+    return 'ethan-vrsc-' + slug + '-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.' + extension;
   }
 
   return {

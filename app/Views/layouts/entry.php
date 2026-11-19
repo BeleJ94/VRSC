@@ -12,7 +12,7 @@
         <?php else: ?>
             <span class="entry-bar__icon"><i data-lucide="gauge"></i></span>
         <?php endif; ?>
-        <h1><?= e($title ?? 'PerfectMaint') ?><small><?= e($currentUser->name()) ?></small></h1>
+        <h1><?= e($title ?? 'ETHAN VRSC') ?><small><?= e($currentUser->name()) ?></small></h1>
         <form method="post" action="<?= e(url('/logout')) ?>">
             <?= csrf_field() ?>
             <button type="submit" aria-label="<?= e(t('auth.logout')) ?>"><i data-lucide="log-out"></i></button>

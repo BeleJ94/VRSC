@@ -25,7 +25,7 @@ $typeIcons = ['part' => 'cog', 'tyre' => 'circle-dot', 'lubricant' => 'droplet',
     <section class="card">
         <div class="card__title"><h2><?= e(t('parts.stock_by_site')) ?></h2></div>
         <div class="table-wrap"><table class="table">
-            <thead><tr><th><?= e(t('fields.site_id')) ?></th><th class="num"><?= e(t('fields.quantity')) ?></th><th class="num"><?= e(t('fields.min_quantity')) ?></th><th><?= e(t('fields.location')) ?></th><?php if ($currentUser->can('parts.manage')): ?><th></th><?php endif; ?></tr></thead>
+            <thead><tr><th><?= e(t('fields.site_id')) ?></th><th class="num"><?= e(t('fields.quantity')) ?></th><th class="num"><?= e(t('fields.min_quantity')) ?></th><th><?= e(t('fields.location')) ?></th><?php if ($currentUser->can('stock.move')): ?><th></th><?php endif; ?></tr></thead>
             <tbody>
             <?php foreach ($stocks as $s): ?>
                 <?php $low = (float) $s['min_quantity'] > 0 && (float) $s['quantity'] < (float) $s['min_quantity']; ?>
@@ -33,8 +33,11 @@ $typeIcons = ['part' => 'cog', 'tyre' => 'circle-dot', 'lubricant' => 'droplet',
                     <td><?= e($s['site']) ?></td>
                     <td class="num<?= $low ? ' overdue' : '' ?>"><?= e(format_qty($s['quantity'])) ?> <?= e($part['unit']) ?><?= $low ? ' <span class="sr-only">' . e(t('parts.below_min')) . '</span>' : '' ?></td>
                     <td class="num"><?= e(format_qty($s['min_quantity'])) ?></td>
-                    <td><?= e($s['location'] ?? '') ?></td>
-                    <?php if ($currentUser->can('parts.manage')): ?>
+                    <td><?= e($s['location'] ?? '') ?>
+                        <?php if ((float) $s['reserved'] > 0): ?><br><span class="muted small"><?= e(t('stock.reserved_short', ['qty' => format_qty($s['reserved'])])) ?></span><?php endif; ?>
+                        <?php if ($s['avg_cost'] !== null): ?><br><span class="muted small"><?= e(t('stock.avg_cost', ['cost' => format_money($s['avg_cost'])])) ?></span><?php endif; ?>
+                    </td>
+                    <?php if ($currentUser->canAt('stock.move', (int) $s['site_id'])): ?>
                         <td class="nowrap">
                             <button type="button" class="btn btn--sm" data-open="#move-<?= e($s['site_id']) ?>"><i data-lucide="arrow-down-up"></i><?= e(t('parts.move')) ?></button>
                             <button type="button" class="btn btn--sm btn--ghost" data-open="#settings-<?= e($s['site_id']) ?>" aria-label="<?= e(t('parts.settings')) ?>"><i data-lucide="settings-2"></i></button>
@@ -46,14 +49,53 @@ $typeIcons = ['part' => 'cog', 'tyre' => 'circle-dot', 'lubricant' => 'droplet',
                                     <div class="field">
                                         <label for="mv-type-<?= e($s['site_id']) ?>"><?= e(t('fields.type')) ?></label>
                                         <select id="mv-type-<?= e($s['site_id']) ?>" name="type" class="input">
-                                            <option value="in"><?= e(t('movement.in')) ?></option>
-                                            <option value="adjust"><?= e(t('movement.adjust')) ?></option>
+                                            <?php foreach (\App\Services\StockService::MANUAL as $mvType): ?>
+                                                <option value="<?= e($mvType) ?>"><?= e(t('movement.' . $mvType)) ?></option>
+                                            <?php endforeach; ?>
                                         </select>
                                         <span class="hint"><?= e(t('parts.adjust_hint')) ?></span>
                                     </div>
                                     <div class="field">
                                         <label for="mv-qty-<?= e($s['site_id']) ?>"><?= e(t('fields.quantity')) ?></label>
-                                        <input id="mv-qty-<?= e($s['site_id']) ?>" name="quantity" type="number" min="0" step="0.01" class="input" required>
+                                        <input id="mv-qty-<?= e($s['site_id']) ?>" name="quantity" type="number" min="0.01" step="0.01" class="input" required>
+                                    </div>
+                                    <div class="field">
+                                        <label for="mv-cost-<?= e($s['site_id']) ?>"><?= e(t('fields.unit_cost')) ?></label>
+                                        <input id="mv-cost-<?= e($s['site_id']) ?>" name="unit_cost" type="number" min="0" step="0.0001" class="input">
+                                        <span class="hint"><?= e(t('stock.cost_hint')) ?></span>
+                                    </div>
+                                    <div class="field">
+                                        <label for="mv-date-<?= e($s['site_id']) ?>"><?= e(t('fields.moved_on')) ?></label>
+                                        <input id="mv-date-<?= e($s['site_id']) ?>" name="moved_on" type="date" class="input" value="<?= e(date('Y-m-d')) ?>" max="<?= e(date('Y-m-d')) ?>">
+                                    </div>
+                                    <div class="field">
+                                        <label for="mv-sup-<?= e($s['site_id']) ?>"><?= e(t('fields.supplier_id')) ?></label>
+                                        <select id="mv-sup-<?= e($s['site_id']) ?>" name="supplier_id" class="input">
+                                            <option value="">—</option>
+                                            <?php foreach ($suppliers as $optId => $optLabel): ?><option value="<?= e($optId) ?>"><?= e($optLabel) ?></option><?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <p class="hint"><?= e(t('stock.beneficiary_hint')) ?></p>
+                                    <div class="field">
+                                        <label for="mv-eq-<?= e($s['site_id']) ?>"><?= e(t('fields.equipment_id')) ?></label>
+                                        <select id="mv-eq-<?= e($s['site_id']) ?>" name="equipment_id" class="input">
+                                            <option value="">—</option>
+                                            <?php foreach ($beneficiaries['equipment'][(int) $s['site_id']] ?? [] as $optId => $optLabel): ?><option value="<?= e($optId) ?>"><?= e($optLabel) ?></option><?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="mv-prj-<?= e($s['site_id']) ?>"><?= e(t('fields.project_id')) ?></label>
+                                        <select id="mv-prj-<?= e($s['site_id']) ?>" name="project_id" class="input">
+                                            <option value="">—</option>
+                                            <?php foreach ($beneficiaries['projects'][(int) $s['site_id']] ?? [] as $optId => $optLabel): ?><option value="<?= e($optId) ?>"><?= e($optLabel) ?></option><?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="mv-dep-<?= e($s['site_id']) ?>"><?= e(t('fields.department_id')) ?></label>
+                                        <select id="mv-dep-<?= e($s['site_id']) ?>" name="department_id" class="input">
+                                            <option value="">—</option>
+                                            <?php foreach ($departments as $optId => $optLabel): ?><option value="<?= e($optId) ?>"><?= e($optLabel) ?></option><?php endforeach; ?>
+                                        </select>
                                     </div>
                                     <div class="field">
                                         <label for="mv-comment-<?= e($s['site_id']) ?>"><?= e(t('fields.comment')) ?></label>

@@ -80,7 +80,7 @@ final class PartRepository extends Repository
 
         return $this->db->fetchAll(
             "SELECT s.id AS site_id, s.name AS site, COALESCE(ps.quantity, 0) AS quantity,
-                    COALESCE(ps.min_quantity, 0) AS min_quantity, ps.location
+                    COALESCE(ps.min_quantity, 0) AS min_quantity, ps.location, ps.avg_cost, COALESCE(ps.reserved, 0) AS reserved
                FROM sites s
                LEFT JOIN part_stocks ps ON ps.site_id = s.id AND ps.part_id = :part
               WHERE $scopeSql AND s.is_active = 1
@@ -90,9 +90,11 @@ final class PartRepository extends Repository
     }
 
     /** Ligne de stock verrouillée (créée à 0 si absente). À appeler dans une transaction. */
-    public function lockStock(int $partId, int $siteId): array
+    public function lockStock(int $partId, int $siteId, bool $checkScope = true): array
     {
-        $this->scope->assertAllows($siteId);
+        if ($checkScope) {
+            $this->scope->assertAllows($siteId);
+        }
         $this->db->execute(
             'INSERT INTO part_stocks (part_id, site_id, quantity) VALUES (:part, :site, 0)
              ON DUPLICATE KEY UPDATE part_id = part_id',
@@ -114,6 +116,16 @@ final class PartRepository extends Repository
         );
     }
 
+    /** Nouveau stock et coût moyen pondéré après un mouvement. */
+    public function setStock(int $partId, int $siteId, float $quantity, ?float $avgCost): void
+    {
+        $this->scope->assertAllows($siteId);
+        $this->db->execute(
+            'UPDATE part_stocks SET quantity = :qty, avg_cost = :avg WHERE part_id = :part AND site_id = :site',
+            ['qty' => $quantity, 'avg' => $avgCost, 'part' => $partId, 'site' => $siteId]
+        );
+    }
+
     public function setStockSettings(int $partId, int $siteId, float $minQuantity, ?string $location): void
     {
         $this->scope->assertAllows($siteId);
@@ -123,16 +135,32 @@ final class PartRepository extends Repository
         );
     }
 
-    public function addMovement(int $partId, int $siteId, string $type, float $quantity, float $stockAfter, ?int $workOrderId, ?string $comment, ?int $userId, ?int $equipmentId = null): int
+    /**
+     * @param array{delta?: float, moved_on?: string, unit_cost?: ?float, value?: ?float, document_ref?: ?string, project_id?: ?int,
+     *              department_id?: ?int, supplier_id?: ?int, transfer_id?: ?int, inventory_id?: ?int} $extra
+     */
+    public function addMovement(int $partId, int $siteId, string $type, float $quantity, float $stockAfter, ?int $workOrderId, ?string $comment, ?int $userId, ?int $equipmentId = null, array $extra = []): int
     {
         $this->scope->assertAllows($siteId);
 
         return $this->db->insert(
-            'INSERT INTO stock_movements (part_id, site_id, work_order_id, equipment_id, type, quantity, stock_after, comment, user_id)
-             VALUES (:part, :site, :wo, :eq, :type, :qty, :after, :comment, :user)',
+            'INSERT INTO stock_movements (part_id, site_id, work_order_id, equipment_id, project_id, department_id, supplier_id, transfer_id,
+                                          inventory_id, type, quantity, delta, stock_after, moved_on, unit_cost, value, document_ref, comment, user_id)
+             VALUES (:part, :site, :wo, :eq, :project, :department, :supplier, :transfer, :inventory, :type, :qty, :delta, :after, :moved_on,
+                     :unit_cost, :value, :document_ref, :comment, :user)',
             [
                 'part' => $partId, 'site' => $siteId, 'wo' => $workOrderId, 'eq' => $equipmentId, 'type' => $type,
                 'qty' => $quantity, 'after' => $stockAfter, 'comment' => $comment, 'user' => $userId,
+                'delta' => $extra['delta'] ?? ($type === 'out' ? -$quantity : $quantity),
+                'moved_on' => $extra['moved_on'] ?? date('Y-m-d'),
+                'unit_cost' => $extra['unit_cost'] ?? null,
+                'value' => $extra['value'] ?? null,
+                'document_ref' => $extra['document_ref'] ?? null,
+                'project' => $extra['project_id'] ?? null,
+                'department' => $extra['department_id'] ?? null,
+                'supplier' => $extra['supplier_id'] ?? null,
+                'transfer' => $extra['transfer_id'] ?? null,
+                'inventory' => $extra['inventory_id'] ?? null,
             ]
         );
     }
@@ -196,6 +224,26 @@ final class PartRepository extends Repository
         );
     }
 
+    /**
+     * Bénéficiaires possibles d'une sortie, par site du périmètre : engins en service et projets actifs.
+     *
+     * @return array{equipment: array<int, array<int, string>>, projects: array<int, array<int, string>>}
+     */
+    public function beneficiaries(): array
+    {
+        $out = ['equipment' => [], 'projects' => []];
+        [$scopeSql, $params] = $this->scope->clause('e.site_id');
+        foreach ($this->db->fetchAll("SELECT e.id, e.site_id, e.code, e.name FROM equipment e WHERE e.is_archived = 0 AND $scopeSql ORDER BY e.code", $params) as $row) {
+            $out['equipment'][(int) $row['site_id']][(int) $row['id']] = $row['code'] . ' – ' . $row['name'];
+        }
+        [$scopeSql, $params] = $this->scope->clause('p.site_id');
+        foreach ($this->db->fetchAll("SELECT p.id, p.site_id, p.code, p.name FROM projects p WHERE p.is_active = 1 AND $scopeSql ORDER BY p.code", $params) as $row) {
+            $out['projects'][(int) $row['site_id']][(int) $row['id']] = $row['code'] . ' – ' . $row['name'];
+        }
+
+        return $out;
+    }
+
     // --- Consommation ---------------------------------------------------------
 
     /** Sorties de stock des $days derniers jours, par site du périmètre. */
@@ -235,7 +283,8 @@ final class PartRepository extends Repository
         [$scopeSql, $params] = $this->scope->clause('m.site_id');
 
         return $this->db->fetchAll(
-            "SELECT m.id, m.type, m.quantity, m.stock_after, m.comment, m.created_at, s.name AS site,
+            "SELECT m.id, m.type, m.quantity, m.delta, m.stock_after, m.comment, m.created_at, m.moved_on, m.document_ref, m.unit_cost,
+                    s.name AS site,
                     w.id AS work_order_id, w.reference AS work_order_reference,
                     CONCAT(u.first_name, ' ', u.last_name) AS user
                FROM stock_movements m

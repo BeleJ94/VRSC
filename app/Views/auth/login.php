@@ -1,17 +1,17 @@
 <?php /** @var string $email  @var string|null $error */ ?>
 <div class="login">
     <aside class="login__hero" aria-hidden="true">
-        <div class="login__brand"><span class="login__logo"><i data-lucide="wrench"></i></span> PerfectMaint</div>
+        <div class="login__brand"><span class="login__logo"><i data-lucide="wrench"></i></span> ETHAN VRSC</div>
         <div class="login__pitch">
             <h2><?= e(t('auth.hero_title')) ?></h2>
             <p><?= e(t('auth.hero_text')) ?></p>
         </div>
-        <div class="login__footnote">© <?= date('Y') ?> Perfect Logistics</div>
+        <div class="login__footnote">© <?= date('Y') ?> VRSC SARL</div>
     </aside>
 
     <section class="login__panel">
         <div class="login__top">
-            <div class="login__brand login__brand--compact"><span class="login__logo"><i data-lucide="wrench"></i></span> PerfectMaint</div>
+            <div class="login__brand login__brand--compact"><span class="login__logo"><i data-lucide="wrench"></i></span> ETHAN VRSC</div>
             <?= $view->partial('partials/lang_switch', ['currentPath' => '/login']) ?>
         </div>
 

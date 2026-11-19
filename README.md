@@ -1,4 +1,4 @@
-# PerfectMaint
+# ETHAN VRSC
 
 GMAO multi-sites minière de Perfect Logistics (CHEMAF, KAMAO, METALKOL : terrassement, ADT, bennes ; KINGAKILA, SICOMINES : bus) : parc d'engins par marque / modèle, conducteurs et équipes par shift, ordres de travail avec intervenants et causes de panne, maintenance préventive, pièces / pneus / lubrifiants avec compatibilité et consommations, besoins achats, alertes coûts, planning, rapports de direction, écrans terrain mobiles, journal d'activité.
 
@@ -105,7 +105,22 @@ Adaptation au cahier des charges VRSC (§ 2 et § 9). Base de travail : `vrsc` ;
 | Numérotation | `NumberingService` | `TYPE-AAAA-00001`, compteur verrouillé par type et par année |
 | Pièces jointes | `AttachmentService`, `/attachments/{id}` | PDF / image, 10 Mo, versionnées, empreinte SHA-256, servies après contrôle du périmètre |
 
-Lots suivants : stocks multisites, EDB / achats, transferts d'engins (OTV), finance / caisse, carburant et coûts par équipement.
+### Stocks multisites (lot 2 de la refonte)
+
+Cahier des charges § 5, recette R6 et R7. Le stock d'un site est celui de son magasin central.
+
+| Brique | Où | Règles clés |
+|---|---|---|
+| Grand livre | `StockService::move`, table `stock_movements` | mouvement daté, signé, valorisé, jamais modifié ni supprimé ; types : réception, stock initial, retour, sortie (bénéficiaire obligatoire : engin, projet ou service), transferts, écart d'inventaire ; bons numérotés BR / BS / BT / INV |
+| Valorisation | `part_stocks.avg_cost` | coût moyen pondéré par article et par magasin ; coût inconnu = valeur « manquante », jamais zéro |
+| Fiche de magasin et état consolidé | `/stock` | stock initial, réceptions, retours, sorties, transferts, écarts, stock final, transit, valeur ; par mois ; exports Excel / PDF ; vue consolidée tous magasins |
+| Journal | `/stock/journal` | toutes les écritures, filtrables par magasin, type et dates |
+| Transferts | `/stock/transfers` | demande → contrôle de disponibilité → autorisation Logistique (quantité réservée) → sortie (transit) → réception par une autre personne → écart expliqué ; le transit n'est compté dans aucun magasin |
+| Inventaires | `/stock/inventories` | photographie du théorique, comptage, écarts justifiés, approbation ; le stock n'est ajusté qu'après approbation, comptage verrouillé dès la soumission |
+| Clôture mensuelle | `/stock/periods` | soldes figés, période verrouillée, clôture dans l'ordre, bloquée par un transit ou un inventaire ouvert |
+| Mes validations | `/approvals` | demandes que les fonctions de l'utilisateur permettent de traiter ; décision enregistrée sur la page du document |
+
+Lots suivants : EDB / achats, transferts d'engins (OTV), finance / caisse, carburant et coûts par équipement.
 
 ### Cycle de vie d'un OT et état de l'engin
 

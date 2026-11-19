@@ -1,6 +1,6 @@
 <?php /** @var int $status  @var string $message  @var string|null $debug */ ?>
 <div class="auth__card">
-    <div class="auth__brand"><i data-lucide="wrench"></i> PerfectMaint</div>
+    <div class="auth__brand"><i data-lucide="wrench"></i> ETHAN VRSC</div>
     <h1><?= e((string) $status) ?></h1>
     <p><?= e($message) ?></p>
     <a class="btn btn--primary" href="<?= e(url('/')) ?>"><?= e(t('common.home')) ?></a>

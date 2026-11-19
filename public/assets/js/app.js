@@ -1,5 +1,5 @@
 /*
- * PerfectMaint — comportements d'interface (jQuery, DataTables, SweetAlert2, Lucide).
+ * ETHAN VRSC — comportements d'interface (jQuery, DataTables, SweetAlert2, Lucide).
  * Aucun script inline : configuration et traductions sont lues depuis des blocs JSON.
  */
 (function ($, Core, Tables, Exporter) {

@@ -20,7 +20,9 @@ const REPOSITORIES = {
   sites: 'SiteRepository',
   users: 'UserRepository',
   readings: 'MeterReadingRepository',
-  activity: 'ActivityLogRepository'
+  activity: 'ActivityLogRepository',
+  stock_statement: 'StockLedgerRepository',
+  stock_journal: 'StockLedgerRepository'
 };
 
 test('chaque tableau a un repository et chaque colonne triable est dans sa liste blanche PHP', () => {
@@ -60,7 +62,11 @@ test('le rendu HTML échappe les données utilisateur', () => {
     users: { name: evil, email: evil, role: 'technician', sites: evil },
     readings: { code: evil, equipment_name: evil, site: evil, hour_meter: 1, odometer_km: null, fuel_level: 50, fuel_liters: 40, recorded_by_name: evil, note: evil },
     activity: { user_name: evil, site: evil, entity_type: 'equipment', action: 'update', summary: evil,
-      before_data: JSON.stringify({ name: evil }), after_data: JSON.stringify({ name: 'ok' }) }
+      before_data: JSON.stringify({ name: evil }), after_data: JSON.stringify({ name: 'ok' }) },
+    stock_statement: { reference: evil, name: evil, unit: evil, site: evil, site_id: 1, qty_open: 1, receipts: 2, returns: 0, issues: 1, transfers: 0,
+      adjustments: 0, qty_close: 2, min_quantity: 5, in_transit: 1, value_close: null },
+    stock_journal: { moved_on: '2026-01-05', document_ref: evil, work_order: evil, part: evil, part_name: evil, site: evil, type: 'receipt', delta: 3,
+      stock_after: 3, unit: evil, value: null, beneficiary: evil, user: evil, comment: evil }
   };
   for (const [name, def] of Object.entries(defs)) {
     for (const col of def.columns) {

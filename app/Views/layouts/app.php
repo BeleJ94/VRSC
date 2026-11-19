@@ -15,12 +15,13 @@ $sections = [
         ['/reports', 'presentation', 'nav.reports', 'reports.view', null],
         ['/alerts', 'siren', 'nav.alerts', 'dashboard.view', 'wear overuse'],
         ['/planning', 'calendar-range', 'nav.planning', 'dashboard.view', null],
+        ['/approvals', 'stamp', 'nav.approvals', 'approvals.use', null],
     ]],
     'maintenance' => ['nav.section_maintenance', [
         ['/work-orders', 'clipboard-list', 'nav.work_orders', 'workorder.view', 'overdue'],
         ['/preventive', 'calendar-clock', 'nav.preventive', 'preventive.view', 'preventive'],
         ['/meters', 'gauge', 'nav.meters', 'equipment.view', 'meter_soon meter_stale'],
-        ['/meters/screen', 'monitor', 'nav.meters_screen', 'equipment.view', null, true],
+        ['/meters/screen', 'monitor', 'nav.meters_screen', 'equipment.view', null, true, true],
         ['/saisie', 'pencil', 'nav.meter_entry', 'meters.entry', null],
     ]],
     'fleet' => ['nav.section_fleet', [
@@ -29,6 +30,9 @@ $sections = [
         ['/teams', 'users-round', 'nav.teams', 'personnel.view', null],
     ]],
     'stores' => ['nav.section_stores', [
+        ['/stock', 'warehouse', 'nav.stock', 'stock.view', null],
+        ['/stock/transfers', 'arrow-left-right', 'nav.stock_transfers', 'stock.view', null, true],
+        ['/stock/inventories', 'clipboard-check', 'nav.stock_inventories', 'stock.view', null, true],
         ['/parts', 'package', 'nav.parts', 'parts.view', null],
         ['/procurement', 'shopping-cart', 'nav.procurement', 'parts.view', 'stock_out stock_low'],
     ]],
@@ -51,9 +55,14 @@ $settings = array_values(array_filter($settings, static fn (array $l) => $curren
 $navLink = static function (array $l) use ($currentPath): string {
     $isSiteWindow = $l[0] === '/sites' && preg_match('#^/sites/\d+$#', $currentPath);
     $current = $isSiteWindow ? '' : nav_current($currentPath, $l[0]);
-    // Sous-lien (ex. écran mural du suivi des index) : en retrait, ouvert dans un nouvel onglet.
+    // Sous-lien : en retrait ; l'écran mural du suivi des index s'ouvre en plus dans un nouvel onglet.
     $sub = !empty($l[5]);
-    return '<li' . ($sub ? ' class="nav__sub"' : '') . '><a href="' . e(url($l[0])) . '"' . $current . ($sub ? ' target="_blank" rel="noopener"' : '') . ' title="' . e(t($l[2])) . '"><i data-lucide="' . e($l[1]) . '"></i>'
+    $blank = !empty($l[6]);
+    // Un sous-lien actif ne doit pas allumer aussi son parent (« /stock » et « /stock/transfers »).
+    if ($l[0] === '/stock' && preg_match('#^/stock/(transfers|inventories)#', $currentPath)) {
+        $current = '';
+    }
+    return '<li' . ($sub ? ' class="nav__sub"' : '') . '><a href="' . e(url($l[0])) . '"' . $current . ($blank ? ' target="_blank" rel="noopener"' : '') . ' title="' . e(t($l[2])) . '"><i data-lucide="' . e($l[1]) . '"></i>'
         . '<span class="nav__text">' . e(t($l[2])) . '</span>'
         . (!empty($l[4]) ? '<span class="nav__badge" data-nav-badge="' . e($l[4]) . '" hidden></span>' : '') . '</a></li>';
 };
@@ -69,7 +78,7 @@ $navLink = static function (array $l) use ($currentPath): string {
     <aside class="sidebar" id="sidebar" aria-label="<?= e(t('nav.main')) ?>">
         <div class="sidebar__brand">
             <i data-lucide="wrench"></i>
-            <div class="nav__text">PerfectMaint<small>Perfect Logistics</small></div>
+            <div class="nav__text">ETHAN VRSC<small>VRSC SARL</small></div>
             <button type="button" class="sidebar__collapse" data-sidebar-mini aria-pressed="false" title="<?= e(t('nav.collapse')) ?>" aria-label="<?= e(t('nav.collapse')) ?>"><i data-lucide="panel-left-close"></i></button>
         </div>
 

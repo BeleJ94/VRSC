@@ -284,10 +284,11 @@ final class WorkOrderService
                 throw Validator::fail('status', 'closed');
             }
             $part = $this->parts->find($data['part_id']) ?? throw Validator::fail('part_id', 'exists');
-            $this->stock->move((int) $part['id'], (int) $wo['site_id'], 'out', $data['quantity'], $wo['reference'], $id);
+            $cost = $this->stock->costOf((int) $part['id'], (int) $wo['site_id']) ?? (float) $part['unit_cost'];
+            $this->stock->move((int) $part['id'], (int) $wo['site_id'], 'out', $data['quantity'], $wo['reference'], $id, (int) $wo['equipment_id']);
             $meters = $this->equipment->find((int) $wo['equipment_id']);
             $this->workOrders->addPart(
-                $id, (int) $part['id'], $data['quantity'], (float) $part['unit_cost'], $this->auth->user()?->id,
+                $id, (int) $part['id'], $data['quantity'], $cost, $this->auth->user()?->id,
                 isset($meters['hour_meter']) ? (int) $meters['hour_meter'] : null,
                 isset($meters['odometer_km']) ? (int) $meters['odometer_km'] : null,
             );

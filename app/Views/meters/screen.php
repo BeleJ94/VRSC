@@ -64,7 +64,7 @@ $kpis = [
     <footer class="wall__foot">
         <span><?= e(t('meters.rule', $rules)) ?></span>
         <span class="wall__paused" data-wall-paused hidden><i data-lucide="pause"></i><?= e(t('meters.wall_paused')) ?> <button type="button" class="wall__link" data-wall-resume><?= e(t('meters.wall_resume')) ?></button></span>
-        <span>PerfectMaint</span>
+        <span>ETHAN VRSC</span>
     </footer>
 
     <div class="wall__overlay" data-wall-modal hidden>

@@ -33,7 +33,7 @@
   /** Classeur ExcelJS : en-tête à la couleur d'accent, filtre auto, volets figés, largeurs ajustées. */
   function buildWorkbook(ExcelJS, title, data, meta) {
     var wb = new ExcelJS.Workbook();
-    wb.creator = 'PerfectMaint';
+    wb.creator = 'ETHAN VRSC';
     wb.created = meta && meta.date ? meta.date : new Date();
     var sheet = wb.addWorksheet(String(title).slice(0, 31) || 'Export', {
       views: [{ state: 'frozen', ySplit: 1 }]
@@ -175,7 +175,7 @@
         {
           width: '*',
           stack: [
-            { text: 'PERFECT LOGISTICS', fontSize: 8, bold: true, color: GREY, characterSpacing: 1.2 },
+            { text: 'VRSC SARL', fontSize: 8, bold: true, color: GREY, characterSpacing: 1.2 },
             { text: t('js.work_order') + ' ' + wo.reference, fontSize: 17, bold: true, color: ACCENT, margin: [0, 3, 0, 2] },
             { text: wo.title, fontSize: 11, color: '#1D2733' }
           ]
@@ -303,14 +303,14 @@
     return {
       pageSize: 'A4',
       pageMargins: [36, 36, 36, 46],
-      info: { title: t('js.work_order') + ' ' + wo.reference, author: 'PerfectMaint', subject: wo.title },
+      info: { title: t('js.work_order') + ' ' + wo.reference, author: 'ETHAN VRSC', subject: wo.title },
       defaultStyle: { fontSize: 9, color: '#1D2733' },
       styles: pdfStyles(),
       footer: function (current, count) {
         return {
           margin: [36, 12, 36, 0],
           columns: [
-            { text: 'PerfectMaint · ' + wo.reference + ' · ' + wo.site, fontSize: 7, color: GREY },
+            { text: 'ETHAN VRSC · ' + wo.reference + ' · ' + wo.site, fontSize: 7, color: GREY },
             { text: t('js.wo_doc.editor'), fontSize: 7, color: GREY, alignment: 'center' },
             { text: current + ' / ' + count, fontSize: 7, color: GREY, alignment: 'right' }
           ]
@@ -377,7 +377,7 @@
   function buildPlanningWorkbook(ExcelJS, payload, matrix) {
     var L = payload.labels;
     var wb = new ExcelJS.Workbook();
-    wb.creator = 'PerfectMaint';
+    wb.creator = 'ETHAN VRSC';
     var sheet = wb.addWorksheet('Planning', {
       views: [{ state: 'frozen', xSplit: 2, ySplit: 4 }],
       pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
@@ -516,7 +516,7 @@
       styles: pdfStyles(),
       footer: function (current, count) {
         return { columns: [
-          { text: 'PerfectMaint · ' + L.title, fontSize: 7, color: '#5B6573', margin: [24, 10, 0, 0] },
+          { text: 'ETHAN VRSC · ' + L.title, fontSize: 7, color: '#5B6573', margin: [24, 10, 0, 0] },
           { text: current + ' / ' + count, alignment: 'right', fontSize: 7, color: '#5B6573', margin: [0, 10, 24, 0] }
         ] };
       },
@@ -578,7 +578,7 @@
   function buildReportWorkbook(ExcelJS, p, images, locale) {
     var L = p.labels;
     var wb = new ExcelJS.Workbook();
-    wb.creator = 'PerfectMaint';
+    wb.creator = 'ETHAN VRSC';
     wb.title = L.title;
     var thin = { style: 'thin', color: { argb: 'FFDDE1E6' } };
     var border = { top: thin, left: thin, bottom: thin, right: thin };
@@ -594,7 +594,7 @@
         views: [{ showGridLines: false }],
         pageSetup: { orientation: landscape ? 'landscape' : 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9,
           margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } },
-        headerFooter: { oddFooter: '&8PerfectMaint · ' + L.confidential + '&R&8&P / &N' }
+        headerFooter: { oddFooter: '&8ETHAN VRSC · ' + L.confidential + '&R&8&P / &N' }
       });
     }
     /** Bandeau titre + sous-titre + lien retour vers la synthèse. */
@@ -858,7 +858,7 @@
       styles: pdfStyles(),
       footer: function (current, count) {
         return { columns: [
-          { text: 'PerfectMaint · ' + L.confidential, fontSize: 7, color: '#8D9098', margin: [28, 12, 0, 0] },
+          { text: 'ETHAN VRSC · ' + L.confidential, fontSize: 7, color: '#8D9098', margin: [28, 12, 0, 0] },
           { text: current + ' / ' + count, alignment: 'right', fontSize: 7, color: '#5B6573', margin: [0, 12, 28, 0] }
         ] };
       },

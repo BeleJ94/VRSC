@@ -23,6 +23,7 @@ final class PartController extends Controller
         private readonly PartService $service,
         private readonly StockService $stock,
         private readonly SiteRepository $sites,
+        private readonly \App\Repositories\ReferenceRepository $references,
     ) {
         parent::__construct($ctx);
     }
@@ -64,6 +65,9 @@ final class PartController extends Controller
             'compatible' => $this->parts->compatibleModels((int) $part['id']),
             'consumption' => $this->parts->consumptionBySite((int) $part['id']),
             'replacements' => $this->parts->replacements((int) $part['id']),
+            'suppliers' => $this->references->options('suppliers'),
+            'departments' => $this->references->options('departments'),
+            'beneficiaries' => $this->parts->beneficiaries(),
         ]);
     }
 

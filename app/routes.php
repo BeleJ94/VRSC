@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use App\Controllers\ActivityController;
+use App\Controllers\ApprovalController;
+use App\Controllers\StockController;
+use App\Controllers\StockInventoryController;
+use App\Controllers\StockTransferController;
 use App\Controllers\AttachmentController;
 use App\Controllers\DelegationController;
 use App\Controllers\ReferenceController;
@@ -127,8 +131,32 @@ return static function (Router $r): void {
     $r->get('/parts/{id}', [PartController::class, 'show'], ['permission' => 'parts.view']);
     $r->get('/parts/{id}/edit', [PartController::class, 'edit'], ['permission' => 'parts.manage']);
     $r->post('/parts/{id}', [PartController::class, 'update'], ['permission' => 'parts.manage']);
-    $r->post('/parts/{id}/movements', [PartController::class, 'movement'], ['permission' => 'parts.manage']);
-    $r->post('/parts/{id}/settings', [PartController::class, 'settings'], ['permission' => 'parts.manage']);
+    $r->post('/parts/{id}/movements', [PartController::class, 'movement'], ['permission' => 'stock.move']);
+    $r->post('/parts/{id}/settings', [PartController::class, 'settings'], ['permission' => 'stock.move']);
+
+    // Stocks multisites : fiche de magasin, état consolidé, journal, transferts (transit), inventaires, clôtures
+    $r->get('/stock', [StockController::class, 'index'], ['permission' => 'stock.view']);
+    $r->get('/stock/data', [StockController::class, 'data'], ['permission' => 'stock.view']);
+    $r->get('/stock/journal', [StockController::class, 'journal'], ['permission' => 'stock.view']);
+    $r->get('/stock/journal/data', [StockController::class, 'journalData'], ['permission' => 'stock.view']);
+    $r->get('/stock/periods', [StockController::class, 'periods'], ['permission' => 'stock.view']);
+    $r->post('/stock/periods', [StockController::class, 'closePeriod'], ['permission' => 'stock.close']);
+    $r->get('/stock/transfers', [StockTransferController::class, 'index'], ['permission' => 'stock.view']);
+    $r->get('/stock/transfers/create', [StockTransferController::class, 'create'], ['permission' => 'stock.transfer']);
+    $r->post('/stock/transfers', [StockTransferController::class, 'store'], ['permission' => 'stock.transfer']);
+    $r->get('/stock/transfers/{id}', [StockTransferController::class, 'show'], ['permission' => 'stock.view']);
+    $r->post('/stock/transfers/{id}/ship', [StockTransferController::class, 'ship'], ['permission' => 'stock.move']);
+    $r->post('/stock/transfers/{id}/receive', [StockTransferController::class, 'receive'], ['permission' => 'stock.move']);
+    $r->post('/stock/transfers/{id}/cancel', [StockTransferController::class, 'cancel'], ['permission' => 'stock.transfer']);
+    $r->get('/stock/inventories', [StockInventoryController::class, 'index'], ['permission' => 'stock.view']);
+    $r->post('/stock/inventories', [StockInventoryController::class, 'store'], ['permission' => 'stock.inventory']);
+    $r->get('/stock/inventories/{id}', [StockInventoryController::class, 'show'], ['permission' => 'stock.view']);
+    $r->post('/stock/inventories/{id}/counts', [StockInventoryController::class, 'counts'], ['permission' => 'stock.inventory']);
+    $r->post('/stock/inventories/{id}/cancel', [StockInventoryController::class, 'cancel'], ['permission' => 'stock.inventory']);
+
+    // Mes validations (circuit d'approbation)
+    $r->get('/approvals', [ApprovalController::class, 'index'], ['permission' => 'approvals.use']);
+    $r->post('/approvals/{id}/act', [ApprovalController::class, 'act'], ['permission' => 'approvals.use']);
 
     // Pilotage : alertes, planning, rapports de direction
     $r->get('/alerts', [ManagementController::class, 'alerts'], ['permission' => 'dashboard.view']);

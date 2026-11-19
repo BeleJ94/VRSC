@@ -265,6 +265,67 @@
             return esc(r.summary) + diffHtml(activityDiff(r, t));
           }, text: function (r) { return (r.summary || '') + diffText(activityDiff(r, t)); } }
         ]
+      },
+
+      // Fiche de magasin / état consolidé : une ligne par article (et par site hors consolidé), sur la période choisie
+      stock_statement: {
+        order: [[0, 'asc']],
+        columns: [
+          { data: 'reference', title: t('fields.reference'), html: function (r) {
+            return '<strong>' + esc(r.reference) + '</strong><br><span class="muted">' + esc(r.name) + '</span>';
+          }, text: function (r) { return r.reference + ' – ' + r.name; } },
+          { data: 'site', title: t('fields.site_id'), text: function (r) {
+            return Number(r.site_id) ? r.site : t('js.stock.sites', { n: r.site });
+          } },
+          { data: 'qty_open', title: t('js.stock.open'), className: 'dt-right', text: function (r) { return num(r.qty_open); } },
+          { data: 'receipts', title: t('js.stock.receipts'), className: 'dt-right', text: function (r) { return Number(r.receipts) ? num(r.receipts) : ''; } },
+          { data: 'returns', title: t('js.stock.returns'), className: 'dt-right', text: function (r) { return Number(r.returns) ? num(r.returns) : ''; } },
+          { data: 'issues', title: t('js.stock.issues'), className: 'dt-right', text: function (r) { return Number(r.issues) ? num(r.issues) : ''; } },
+          { data: 'transfers', title: t('js.stock.transfers'), className: 'dt-right', text: function (r) { return Number(r.transfers) ? num(r.transfers) : ''; } },
+          { data: 'adjustments', title: t('js.stock.adjustments'), className: 'dt-right', text: function (r) { return Number(r.adjustments) ? num(r.adjustments) : ''; } },
+          { data: 'qty_close', title: t('js.stock.close'), className: 'dt-right', html: function (r) {
+            var low = Number(r.min_quantity) > 0 && Number(r.qty_close) < Number(r.min_quantity);
+            return '<strong' + (low ? ' class="overdue"' : '') + '>' + esc(num(r.qty_close)) + '</strong> ' + esc(r.unit)
+              + (Number(r.min_quantity) ? '<br><span class="muted">' + esc(t('js.min_short')) + ' ' + esc(num(r.min_quantity)) + '</span>' : '');
+          }, text: function (r) { return num(r.qty_close); } },
+          { data: 'in_transit', title: t('js.stock.in_transit'), className: 'dt-right', text: function (r) { return Number(r.in_transit) ? num(r.in_transit) : ''; } },
+          { data: 'value_close', title: t('js.stock.value'), className: 'dt-right', html: function (r) {
+            if (r.value_close === null || r.value_close === undefined) {
+              return Number(r.qty_close) > 0 ? '<span class="badge badge--waiting_part">' + esc(t('js.stock.value_missing')) + '</span>' : '';
+            }
+            return esc(Core.formatMoney(r.value_close, locale));
+          }, text: function (r) {
+            if (r.value_close === null || r.value_close === undefined) return Number(r.qty_close) > 0 ? t('js.stock.value_missing') : '';
+            return Core.formatMoney(r.value_close, locale);
+          } }
+        ]
+      },
+
+      // Journal des mouvements d'un magasin
+      stock_journal: {
+        order: [[0, 'desc']],
+        columns: [
+          { data: 'moved_on', title: t('js.date'), className: 'nowrap', text: function (r) { return date(r.moved_on); } },
+          { data: 'document_ref', title: t('js.stock.document'), html: function (r) {
+            return r.document_ref ? '<span class="mono">' + esc(r.document_ref) + '</span>' : (r.work_order ? '<span class="mono">' + esc(r.work_order) + '</span>' : '');
+          }, text: function (r) { return r.document_ref || r.work_order || ''; } },
+          { data: 'part', title: t('fields.reference'), html: function (r) {
+            return '<strong>' + esc(r.part) + '</strong><br><span class="muted">' + esc(r.part_name) + '</span>';
+          }, text: function (r) { return r.part + ' – ' + r.part_name; } },
+          { data: 'site', title: t('fields.site_id'), orderable: false },
+          { data: 'type', title: t('fields.type'), text: function (r) { return t('movement.' + r.type); } },
+          { data: 'delta', title: t('fields.quantity'), className: 'dt-right', html: function (r) {
+            var n = Number(r.delta);
+            return '<strong>' + (n > 0 ? '+' : '') + esc(num(n)) + '</strong> ' + esc(r.unit) + '<br><span class="muted">→ ' + esc(num(r.stock_after)) + '</span>';
+          }, text: function (r) { return num(r.delta); } },
+          { data: 'value', title: t('js.stock.value'), className: 'dt-right', text: function (r) {
+            return r.value === null || r.value === undefined ? t('js.stock.value_missing') : Core.formatMoney(r.value, locale);
+          } },
+          { data: 'beneficiary', title: t('js.stock.beneficiary'), orderable: false, text: function (r) { return r.beneficiary || ''; } },
+          { data: 'user', title: t('js.user'), orderable: false, html: function (r) {
+            return esc(r.user || '') + (r.comment ? '<br><span class="muted">' + esc(r.comment) + '</span>' : '');
+          }, text: function (r) { return r.user || ''; } }
+        ]
       }
     };
 
@@ -281,7 +342,11 @@
         suggested: { type: 'qty', blankZero: true }, order_value: { type: 'money', blankZero: true } },
       users: { last_login_at: { type: 'datetime' } },
       readings: { recorded_at: { type: 'datetime' }, hour_meter: { type: 'int', unit: 'h' }, odometer_km: { type: 'int', unit: 'km' } },
-      activity: { created_at: { type: 'datetime' } }
+      activity: { created_at: { type: 'datetime' } },
+      stock_statement: { qty_open: { type: 'qty' }, receipts: { type: 'qty', blankZero: true }, returns: { type: 'qty', blankZero: true },
+        issues: { type: 'qty', blankZero: true }, transfers: { type: 'qty', blankZero: true }, adjustments: { type: 'qty', blankZero: true },
+        qty_close: { type: 'qty' }, in_transit: { type: 'qty', blankZero: true } },
+      stock_journal: { moved_on: { type: 'date' }, delta: { type: 'qty' } }
     };
     Object.keys(XL).forEach(function (name) {
       defs[name].columns.forEach(function (col) {

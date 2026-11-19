@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1F4E79">
 <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
-<title><?= e(isset($title) ? $title . ' · PerfectMaint' : 'PerfectMaint') ?></title>
+<title><?= e(isset($title) ? $title . ' · ETHAN VRSC' : 'ETHAN VRSC') ?></title>
 <link rel="icon" type="image/svg+xml" href="<?= e(asset('favicon.svg')) ?>">
 <link rel="stylesheet" href="<?= e(asset('vendor/dataTables.min.css')) ?>">
 <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">

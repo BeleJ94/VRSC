@@ -12,7 +12,7 @@
         <?php else: ?>
             <a href="<?= e(url('/')) ?>" aria-label="<?= e(t('nav.dashboard')) ?>"><i data-lucide="layout-dashboard"></i></a>
         <?php endif; ?>
-        <h1><?= e($title ?? 'PerfectMaint') ?></h1>
+        <h1><?= e($title ?? 'ETHAN VRSC') ?></h1>
         <form method="post" action="<?= e(url('/logout')) ?>">
             <?= csrf_field() ?>
             <button type="submit" aria-label="<?= e(t('auth.logout')) ?>"><i data-lucide="log-out"></i></button>

@@ -29,6 +29,7 @@ final class App
         Url::configure((string) $config['base_path'], $root . '/public');
 
         $c = new Container();
+        $c->set(Container::class, $c);
         $c->set(Database::class, $db);
         $c->set(Session::class, $session);
         $c->set(Request::class, $request);
