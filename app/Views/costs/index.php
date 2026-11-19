@@ -74,6 +74,15 @@ $variation = (float) ($totals['total'] ?? 0) - (float) ($totals['prev_total'] ??
             </select>
         </div>
         <div class="field">
+            <label for="filter-project"><?= e(t('fields.project_id')) ?></label>
+            <select id="filter-project" name="project_id" class="input" data-filter>
+                <option value=""><?= e(t('common.all')) ?></option>
+                <?php foreach ($projects as $project): ?>
+                    <option value="<?= e($project['id']) ?>"<?= (int) $filters['project_id'] === (int) $project['id'] ? ' selected' : '' ?>><?= e($project['code'] . ' – ' . $project['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="field">
             <label for="filter-flag"><?= e(t('costs.show')) ?></label>
             <select id="filter-flag" name="flag" class="input" data-filter>
                 <option value=""><?= e(t('common.all')) ?></option>

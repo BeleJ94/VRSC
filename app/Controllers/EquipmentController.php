@@ -51,6 +51,8 @@ final class EquipmentController extends Controller
         private readonly EquipmentDocumentRepository $documents,
         private readonly EquipmentDocumentService $documentService,
         private readonly FuelGaugeRepository $gauges,
+        private readonly \App\Services\EquipmentReleaseService $releases,
+        private readonly \App\Repositories\UserRepository $users,
     ) {
         parent::__construct($ctx);
     }
@@ -62,7 +64,8 @@ final class EquipmentController extends Controller
             'sites' => $this->sites->listActive(),
             'categories' => $this->equipment->categories(),
             'statuses' => EquipmentStatus::cases(),
-            'filters' => ['site_id' => $this->siteFilter($request), 'status' => $request->string('status')],
+            'projects' => $this->equipment->projects(),
+            'filters' => ['site_id' => $this->siteFilter($request), 'status' => $request->string('status'), 'incomplete' => $request->string('incomplete') === '1'],
         ]);
     }
 
@@ -74,6 +77,8 @@ final class EquipmentController extends Controller
             'site_id' => $this->siteFilter($request),
             'status' => in_array($request->string('status'), EquipmentStatus::values(), true) ? $request->string('status') : null,
             'category_id' => $request->int('category_id'),
+            'project_id' => $request->int('project_id'),
+            'incomplete' => $request->string('incomplete') === '1',
             'contract_days' => in_array($request->int('contract_days'), [30, 60, 90], true) ? $request->int('contract_days') : null,
         ]));
     }
@@ -95,7 +100,10 @@ final class EquipmentController extends Controller
         return $this->render('equipment/show', [
             'title' => $item['code'],
             'item' => $item,
-            'statuses' => EquipmentStatus::cases(),
+            'statuses' => EquipmentStatus::manual(),
+            'release' => $this->releases->latest((int) $item['id']),
+            'infoStates' => \App\Domain\EquipmentInfo::states($item),
+            'responsibles' => $this->user()->can('documents.manage') ? $this->users->assignableForSite((int) $item['site_id']) : [],
             'history' => $this->equipment->statusHistory((int) $item['id']),
             'photos' => $this->photos->forEquipment((int) $item['id']),
             'readings' => $this->equipment->readings((int) $item['id'], 1000), // tableau paginé côté navigateur
@@ -145,12 +153,47 @@ final class EquipmentController extends Controller
     public function status(Request $request, array $params): Response
     {
         $id = $this->id($params);
-        $this->service->changeStatus($id, $request->body);
+        $message = $this->service->changeStatus($id, $request->body) === 'pending' ? t('flash.release_requested') : t('flash.status_changed');
         if ($request->wantsJson()) {
-            return $this->json(['ok' => true, 'message' => t('flash.status_changed')]);
+            return $this->json(['ok' => true, 'message' => $message]);
         }
 
-        return $this->redirect("/equipment/$id", t('flash.status_changed'));
+        return $this->redirect("/equipment/$id", $message);
+    }
+
+    /** Lien « document » d'une demande de remise en service (page Validations) : renvoie à la fiche de l'engin. */
+    public function release(Request $request, array $params): Response
+    {
+        $release = $this->releases->find($this->id($params)) ?? throw HttpException::notFound();
+        $item = $this->equipment->find((int) $release['equipment_id']) ?? throw HttpException::notFound();
+
+        return $this->redirect('/equipment/' . $item['id'] . '#approval');
+    }
+
+    /** Document « en renouvellement » (ou fin du renouvellement) avec son responsable. */
+    public function documentRenewal(Request $request, array $params): Response
+    {
+        $id = $this->id($params);
+        $this->documentService->setRenewal($id, (int) $params['documentId'], $request->body);
+
+        return $this->redirect("/equipment/$id#documents", t('flash.document_saved'));
+    }
+
+    /** Type de document déclaré « non applicable » à cet engin (motif obligatoire). */
+    public function exemptDocument(Request $request, array $params): Response
+    {
+        $id = $this->id($params);
+        $this->documentService->exempt($id, $request->body);
+
+        return $this->redirect("/equipment/$id#documents", t('flash.document_saved'));
+    }
+
+    public function unexemptDocument(Request $request, array $params): Response
+    {
+        $id = $this->id($params);
+        $this->documentService->unexempt($id, (int) $params['typeId']);
+
+        return $this->redirect("/equipment/$id#documents", t('flash.document_saved'));
     }
 
     public function archive(Request $request, array $params): Response
@@ -282,6 +325,7 @@ final class EquipmentController extends Controller
             'brands' => $this->catalog->brands(true),
             'models' => $this->catalog->models(true, isset($item['model_id']) ? (int) $item['model_id'] : null),
             'gauges' => $this->gauges->all(),
+            'projects' => $this->equipment->projects(isset($item['project_id']) ? (int) $item['project_id'] : null),
         ]);
     }
 }

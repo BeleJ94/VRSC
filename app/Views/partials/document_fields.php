@@ -4,8 +4,10 @@
  * Le formulaire parent doit être en enctype="multipart/form-data".
  * @var array $doc  document existant (correction) ou valeurs par défaut
  * @var string|null $fileUrl  lien du fichier joint actuel
+ * @var array $responsibles  comptes proposés comme responsable du suivi (vide = champ masqué)
  */
 $fileUrl ??= null;
+$responsibles ??= [];
 $val = static fn (string $name) => old($name, $doc[$name] ?? null);
 $err = static fn (string $name) => ($m = field_error($name)) ? '<span class="error">' . e($m) . '</span>' : '';
 ?>
@@ -26,6 +28,19 @@ $err = static fn (string $name) => ($m = field_error($name)) ? '<span class="err
     <input name="expires_at" type="date" class="input" required value="<?= e($val('expires_at')) ?>">
     <?= $err('expires_at') ?>
 </div>
+<?php if ($responsibles !== []): ?>
+<div class="field span-2">
+    <label><?= e(t('fields.responsible_id')) ?></label>
+    <select name="responsible_id" class="input">
+        <option value="">—</option>
+        <?php foreach ($responsibles as $person): ?>
+            <option value="<?= e($person['id']) ?>"<?= (int) $person['id'] === (int) $val('responsible_id') ? ' selected' : '' ?>><?= e($person['name']) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <span class="hint"><?= e(t('documents.responsible_hint')) ?></span>
+    <?= $err('responsible_id') ?>
+</div>
+<?php endif; ?>
 <div class="field span-2">
     <label><?= e(t('fields.note')) ?></label>
     <input name="note" class="input" maxlength="255" value="<?= e($val('note')) ?>">

@@ -156,15 +156,16 @@ final class CatalogService
         $data = Validator::validate($input, [
             'fuel_gauge_id' => 'int',
             'tank_capacity_l' => 'int|min:1|max:20000',
+            'fuel_reference' => 'numeric|min:0.01|max:9999',
         ]);
         if ($data['fuel_gauge_id'] !== null && $this->gauges->find($data['fuel_gauge_id']) === null) {
             throw Validator::fail('fuel_gauge_id', 'exists');
         }
         $this->db->transaction(function () use ($modelId, $data): void {
             $before = $this->catalog->findModel($modelId) ?? throw HttpException::notFound();
-            $this->gauges->setModelFuel($modelId, $data['fuel_gauge_id'], $data['tank_capacity_l']);
+            $this->gauges->setModelFuel($modelId, $data['fuel_gauge_id'], $data['tank_capacity_l'], $data['fuel_reference']);
             $this->logger->log('update', 'model', $modelId, null,
-                ['fuel_gauge_id' => $before['fuel_gauge_id'] ?? null, 'tank_capacity_l' => $before['tank_capacity_l'] ?? null],
+                ['fuel_gauge_id' => $before['fuel_gauge_id'] ?? null, 'tank_capacity_l' => $before['tank_capacity_l'] ?? null, 'fuel_reference' => $before['fuel_reference'] ?? null],
                 $data, $before['brand'] . ' ' . $before['name']);
         });
     }

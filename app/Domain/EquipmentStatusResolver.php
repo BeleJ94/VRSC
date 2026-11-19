@@ -6,7 +6,7 @@ namespace App\Domain;
 
 /**
  * Détermine l'état d'un engin après la clôture d'un OT, selon les OT encore ouverts.
- * Un engin « immobilisé » (décision administrative) ne change d'état que manuellement.
+ * Un engin « immobilisé » (décision administrative) ou « hors service » ne change d'état que manuellement.
  */
 final class EquipmentStatusResolver
 {
@@ -15,7 +15,7 @@ final class EquipmentStatusResolver
      */
     public static function afterClosure(EquipmentStatus $current, array $remainingOpen): EquipmentStatus
     {
-        if ($current === EquipmentStatus::Immobilized) {
+        if ($current->isSticky()) {
             return $current;
         }
         $statuses = array_column($remainingOpen, 'status');
@@ -37,7 +37,7 @@ final class EquipmentStatusResolver
     /** État imposé par un événement d'OT, sauf si l'engin est immobilisé. */
     public static function onWorkOrderEvent(EquipmentStatus $current, ?EquipmentStatus $imposed): EquipmentStatus
     {
-        if ($current === EquipmentStatus::Immobilized || $imposed === null) {
+        if ($current->isSticky() || $imposed === null) {
             return $current;
         }
 

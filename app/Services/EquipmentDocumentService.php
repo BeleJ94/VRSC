@@ -44,6 +44,8 @@ final class EquipmentDocumentService
             return $this->db->transaction(function () use ($equipmentId, $data, $stored): int {
                 $equipment = $this->equipment->findForUpdate($equipmentId) ?? throw HttpException::notFound();
                 $id = $this->documents->create(['equipment_id' => $equipmentId, 'created_by' => $this->auth->user()?->id] + $data);
+                // Un document saisi pour un type déclaré « non applicable » lève cette déclaration.
+                $this->documents->unexempt($equipmentId, (int) $data['document_type_id']);
                 if ($stored !== null) {
                     $this->documents->setFile($id, $stored);
                 }
@@ -95,6 +97,67 @@ final class EquipmentDocumentService
         $this->unlink($file);
     }
 
+    /**
+     * Passe le document en vigueur « en renouvellement » (responsable obligatoire) ou clôt le renouvellement.
+     * Le renouvellement se termine aussi de lui-même quand le nouveau document est saisi.
+     */
+    public function setRenewal(int $equipmentId, int $documentId, array $input): void
+    {
+        $data = Validator::validate($input, ['renewing' => 'bool', 'responsible_id' => 'int', 'renewal_note' => 'string|max:255']);
+        $start = (bool) $data['renewing'];
+        if ($start && $data['responsible_id'] === null) {
+            throw Validator::fail('responsible_id', 'required');
+        }
+        $this->assertResponsible($data['responsible_id']);
+        $this->db->transaction(function () use ($equipmentId, $documentId, $data, $start): void {
+            $equipment = $this->equipment->findForUpdate($equipmentId) ?? throw HttpException::notFound();
+            $before = $this->owned($equipmentId, $documentId);
+            $this->documents->setRenewal($documentId, $start ? date('Y-m-d') : null, $start ? $data['responsible_id'] : null, $start ? $data['renewal_note'] : null);
+            $this->logger->log($start ? 'document_renewal_start' : 'document_renewal_end', 'equipment', $equipmentId, (int) $equipment['site_id'],
+                ['renewal_started_at' => $before['renewal_started_at'], 'responsible_id' => $before['responsible_id']],
+                ['renewal_started_at' => $start ? date('Y-m-d') : null, 'responsible_id' => $start ? $data['responsible_id'] : $before['responsible_id'], 'note' => $data['renewal_note']],
+                $equipment['code'] . ' : ' . $this->summary($before));
+        });
+    }
+
+    /** Déclare un type de document « non applicable » à l'engin : motif obligatoire, impossible si un document existe. */
+    public function exempt(int $equipmentId, array $input): void
+    {
+        $data = Validator::validate($input, ['document_type_id' => 'required|int', 'reason' => 'required|string|max:255']);
+        if (!in_array($data['document_type_id'], array_map('intval', array_column($this->documents->types(), 'id')), true)) {
+            throw Validator::fail('document_type_id', 'in');
+        }
+        $this->db->transaction(function () use ($equipmentId, $data): void {
+            $equipment = $this->equipment->findForUpdate($equipmentId) ?? throw HttpException::notFound();
+            if ($this->documents->hasDocument($equipmentId, $data['document_type_id'])) {
+                throw Validator::fail('document_type_id', 'document_exists');
+            }
+            $this->documents->exempt($equipmentId, $data['document_type_id'], $data['reason'], $this->auth->user()?->id);
+            $this->logger->log('document_exempt', 'equipment', $equipmentId, (int) $equipment['site_id'], null, $data, $equipment['code'] . ' : ' . $data['reason']);
+        });
+    }
+
+    public function unexempt(int $equipmentId, int $typeId): void
+    {
+        $this->db->transaction(function () use ($equipmentId, $typeId): void {
+            $equipment = $this->equipment->findForUpdate($equipmentId) ?? throw HttpException::notFound();
+            $before = $this->documents->exemption($equipmentId, $typeId);
+            if ($before === null) {
+                return;
+            }
+            $this->documents->unexempt($equipmentId, $typeId);
+            $this->logger->log('document_unexempt', 'equipment', $equipmentId, (int) $equipment['site_id'],
+                ['document_type_id' => $typeId, 'reason' => $before['reason']], null, $equipment['code']);
+        });
+    }
+
+    private function assertResponsible(?int $userId): void
+    {
+        if ($userId !== null && $this->db->fetchValue('SELECT 1 FROM users WHERE id = :id AND is_active = 1', ['id' => $userId]) === null) {
+            throw Validator::fail('responsible_id', 'exists');
+        }
+    }
+
     /** Fichier joint d'un document de cet engin, dans le périmètre. @return array{path: string, mime: string, name: string, file_name: string}|null */
     public function file(int $equipmentId, int $documentId): ?array
     {
@@ -121,7 +184,9 @@ final class EquipmentDocumentService
             'issued_at' => 'date',
             'expires_at' => 'required|date',
             'note' => 'string|max:255',
+            'responsible_id' => 'int',
         ]);
+        $this->assertResponsible($data['responsible_id']);
         if (!in_array($data['document_type_id'], array_map('intval', array_column($this->documents->types($data['document_type_id']), 'id')), true)) {
             throw Validator::fail('document_type_id', 'in');
         }

@@ -16,11 +16,13 @@ final class EquipmentDocumentRepository extends Repository
           AND (n.expires_at > d.expires_at OR (n.expires_at = d.expires_at AND n.id > d.id)))';
 
     private const COLUMNS = 'd.id, d.equipment_id, d.document_type_id, d.issuer, d.reference, d.issued_at, d.expires_at, d.note,
+        d.responsible_id, d.renewal_started_at, d.renewal_note,
+        (SELECT CONCAT(ru.first_name, \' \', ru.last_name) FROM users ru WHERE ru.id = d.responsible_id) AS responsible,
         d.file_name, d.original_name, d.mime, d.size_bytes,
         d.created_at, t.code AS type_code, t.name AS type_name, t.alert_days, DATEDIFF(d.expires_at, CURDATE()) AS days_left';
 
     /** États du tableau de bord, du plus urgent au moins urgent. */
-    public const STATES = ['expired', 'soon', 'missing', 'valid', 'none'];
+    public const STATES = ['expired', 'soon', 'renewing', 'missing', 'valid', 'none', 'not_applicable'];
 
     public const SORTABLE = [
         'code' => 'x.code',
@@ -42,18 +44,24 @@ final class EquipmentDocumentRepository extends Repository
         [$scopeSql, $params] = $this->scope->clause('e.site_id');
         $sql = "(SELECT e.id AS equipment_id, e.code, e.name AS equipment_name, e.plate_number, e.site_id, s.name AS site,
                         t.id AS document_type_id, t.code AS type_code, t.name AS type_name, t.sort_order AS type_sort,
-                        d.id, d.issuer, d.reference, d.issued_at, d.expires_at, d.file_name,
+                        d.id, d.issuer, d.reference, d.issued_at, d.expires_at, d.file_name, d.renewal_started_at,
+                        (SELECT CONCAT(ru.first_name, ' ', ru.last_name) FROM users ru WHERE ru.id = d.responsible_id) AS responsible, ex.reason AS exemption_reason,
                         DATEDIFF(d.expires_at, CURDATE()) AS days_left,
-                        CASE WHEN d.id IS NULL THEN 'missing' WHEN d.expires_at IS NULL THEN 'none'
+                        CASE WHEN d.id IS NULL AND ex.equipment_id IS NOT NULL THEN 'not_applicable'
+                             WHEN d.id IS NULL THEN 'missing' WHEN d.renewal_started_at IS NOT NULL THEN 'renewing'
+                             WHEN d.expires_at IS NULL THEN 'none'
                              WHEN d.expires_at < CURDATE() THEN 'expired'
                              WHEN d.expires_at <= CURDATE() + INTERVAL t.alert_days DAY THEN 'soon' ELSE 'valid' END AS state,
-                        CASE WHEN d.id IS NULL THEN 2 WHEN d.expires_at IS NULL THEN 4
+                        CASE WHEN d.id IS NULL AND ex.equipment_id IS NOT NULL THEN 6
+                             WHEN d.id IS NULL THEN 3 WHEN d.renewal_started_at IS NOT NULL THEN 2
+                             WHEN d.expires_at IS NULL THEN 5
                              WHEN d.expires_at < CURDATE() THEN 0
-                             WHEN d.expires_at <= CURDATE() + INTERVAL t.alert_days DAY THEN 1 ELSE 3 END AS state_rank
+                             WHEN d.expires_at <= CURDATE() + INTERVAL t.alert_days DAY THEN 1 ELSE 4 END AS state_rank
                    FROM equipment e
                    JOIN sites s ON s.id = e.site_id
                    JOIN document_types t ON t.is_active = 1
                    LEFT JOIN equipment_documents d ON d.equipment_id = e.id AND d.document_type_id = t.id AND " . self::CURRENT . "
+                   LEFT JOIN equipment_document_exemptions ex ON ex.equipment_id = e.id AND ex.document_type_id = t.id
                   WHERE e.is_archived = 0 AND $scopeSql) x";
 
         return [$sql, $params];
@@ -99,6 +107,10 @@ final class EquipmentDocumentRepository extends Repository
         foreach ($result['data'] as &$row) {
             $row['type_label'] = doc_type_label($row);
             $row['state_label'] = t('doc_state.' . $row['state'], ['days' => abs((int) $row['days_left'])]);
+            if ($row['state'] === 'renewing' && $row['days_left'] !== null) {
+                // Un renouvellement en cours ne masque pas l'échéance : elle reste lisible.
+                $row['state_label'] .= ' · ' . ((int) $row['days_left'] < 0 ? t('doc_state.expired', ['days' => abs((int) $row['days_left'])]) : t('doc_state.soon', ['days' => (int) $row['days_left']]));
+            }
         }
 
         return $result;
@@ -117,9 +129,12 @@ final class EquipmentDocumentRepository extends Repository
         return array_map('intval', array_column($rows, 'n', 'state')) + array_fill_keys(self::STATES, 0);
     }
 
-    /** État d'une échéance : none (sans date), expired, soon (dans le délai d'alerte du type) ou valid. */
-    public static function state(?string $expiresAt, int $alertDays): string
+    /** État d'une échéance : renewing (renouvellement en cours), none (sans date), expired, soon (dans le délai d'alerte du type) ou valid. */
+    public static function state(?string $expiresAt, int $alertDays, ?string $renewalStartedAt = null): string
     {
+        if ($renewalStartedAt !== null && $renewalStartedAt !== '') {
+            return 'renewing';
+        }
         if ($expiresAt === null || $expiresAt === '') {
             return 'none';
         }
@@ -170,12 +185,18 @@ final class EquipmentDocumentRepository extends Repository
         );
         $groups = [];
         foreach ($this->types() as $type) {
-            $groups[(int) $type['id']] = ['type' => $type, 'current' => null, 'history' => []];
+            $groups[(int) $type['id']] = ['type' => $type, 'current' => null, 'history' => [], 'exemption' => null];
+        }
+        foreach ($this->db->fetchAll('SELECT document_type_id, reason FROM equipment_document_exemptions WHERE equipment_id = :id', ['id' => $equipmentId]) as $exemption) {
+            if (isset($groups[(int) $exemption['document_type_id']])) {
+                $groups[(int) $exemption['document_type_id']]['exemption'] = $exemption['reason'];
+            }
         }
         foreach ($rows as $row) {
             $typeId = (int) $row['document_type_id'];
-            $groups[$typeId] ??= ['type' => ['id' => $typeId, 'code' => $row['type_code'], 'name' => $row['type_name'], 'alert_days' => $row['alert_days']], 'current' => null, 'history' => []];
-            $row['state'] = self::state($row['expires_at'], (int) $row['alert_days']);
+            $groups[$typeId] ??= ['type' => ['id' => $typeId, 'code' => $row['type_code'], 'name' => $row['type_name'], 'alert_days' => $row['alert_days']], 'current' => null, 'history' => [], 'exemption' => null];
+            // Seul le document en vigueur peut être « en renouvellement ».
+            $row['state'] = self::state($row['expires_at'], (int) $row['alert_days'], $groups[$typeId]['current'] === null ? $row['renewal_started_at'] : null);
             if ($groups[$typeId]['current'] === null) {
                 $groups[$typeId]['current'] = $row;
             } else {
@@ -221,8 +242,8 @@ final class EquipmentDocumentRepository extends Repository
     public function create(array $data): int
     {
         return $this->db->insert(
-            'INSERT INTO equipment_documents (equipment_id, document_type_id, issuer, reference, issued_at, expires_at, note, created_by)
-             VALUES (:equipment_id, :document_type_id, :issuer, :reference, :issued_at, :expires_at, :note, :created_by)',
+            'INSERT INTO equipment_documents (equipment_id, document_type_id, issuer, reference, issued_at, expires_at, note, responsible_id, created_by)
+             VALUES (:equipment_id, :document_type_id, :issuer, :reference, :issued_at, :expires_at, :note, :responsible_id, :created_by)',
             $data
         );
     }
@@ -231,7 +252,7 @@ final class EquipmentDocumentRepository extends Repository
     {
         $this->db->execute(
             'UPDATE equipment_documents SET document_type_id = :document_type_id, issuer = :issuer, reference = :reference,
-                    issued_at = :issued_at, expires_at = :expires_at, note = :note
+                    issued_at = :issued_at, expires_at = :expires_at, note = :note, responsible_id = :responsible_id
               WHERE id = :id',
             ['id' => $id] + $data
         );
@@ -244,6 +265,39 @@ final class EquipmentDocumentRepository extends Repository
             'UPDATE equipment_documents SET file_name = :file_name, original_name = :original_name, mime = :mime, size_bytes = :size_bytes WHERE id = :id',
             ['id' => $id] + ($file ?? ['file_name' => null, 'original_name' => null, 'mime' => null, 'size_bytes' => null])
         );
+    }
+
+    /** Début (date + responsable) ou fin (date nulle) du renouvellement d'un document. */
+    public function setRenewal(int $id, ?string $startedAt, ?int $responsibleId, ?string $note): void
+    {
+        $this->db->execute(
+            'UPDATE equipment_documents SET renewal_started_at = :s, renewal_note = :n, responsible_id = COALESCE(:r, responsible_id) WHERE id = :id',
+            ['s' => $startedAt, 'n' => $note, 'r' => $responsibleId, 'id' => $id]
+        );
+    }
+
+    public function exemption(int $equipmentId, int $typeId): ?array
+    {
+        return $this->db->fetchOne('SELECT * FROM equipment_document_exemptions WHERE equipment_id = :e AND document_type_id = :t', ['e' => $equipmentId, 't' => $typeId]);
+    }
+
+    public function exempt(int $equipmentId, int $typeId, string $reason, ?int $userId): void
+    {
+        $this->db->execute(
+            'INSERT INTO equipment_document_exemptions (equipment_id, document_type_id, reason, created_by) VALUES (:e, :t, :r, :u)
+             ON DUPLICATE KEY UPDATE reason = VALUES(reason), created_by = VALUES(created_by)',
+            ['e' => $equipmentId, 't' => $typeId, 'r' => $reason, 'u' => $userId]
+        );
+    }
+
+    public function unexempt(int $equipmentId, int $typeId): void
+    {
+        $this->db->execute('DELETE FROM equipment_document_exemptions WHERE equipment_id = :e AND document_type_id = :t', ['e' => $equipmentId, 't' => $typeId]);
+    }
+
+    public function hasDocument(int $equipmentId, int $typeId): bool
+    {
+        return (bool) $this->db->fetchValue('SELECT 1 FROM equipment_documents WHERE equipment_id = :e AND document_type_id = :t LIMIT 1', ['e' => $equipmentId, 't' => $typeId]);
     }
 
     public function delete(int $id): void

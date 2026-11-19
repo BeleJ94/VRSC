@@ -187,7 +187,18 @@ Cahier des charges § 8, recette R8.
 
 Ajouts : taux horaire sur la fiche du personnel, prestations externes sur la fiche d'un OT, consommation de référence par modèle ou par engin (`fuel_reference`).
 
-Lots suivants : compléments flotte (fiche équipement, statuts, documents), sauvegardes.
+### Compléments de la flotte (lot 7 de la refonte)
+
+| Brique | Où | Règles clés |
+|---|---|---|
+| Fiche équipement | `/equipment/{id}`, `EquipmentService`, `Domain\EquipmentInfo` | année, puissance et unité, tonnage / capacité, couleur, date d'acquisition, propriétaire, projet / chantier du site, consommation de référence |
+| Non applicable ≠ manquant | idem | chaque information suivie est renseignée, déclarée « non applicable » ou signalée « manquante » ; filtre « informations manquantes » sur la liste |
+| Statuts | `Domain\EquipmentStatus` | « hors service » (décision manuelle, les OT ne le modifient pas) et « remise en service à valider » (jamais posé à la main) |
+| Remise en service | `EquipmentReleaseService`, circuit `equipment_release` | OT correctif ou immobilisant terminé, ou retour manuel à « disponible » : demande `RMS-AAAA-n` validée par une autre personne (responsable maintenance, supérieur hiérarchique ou Direction Logistique) ; refus motivé → « en panne » ; entretien préventif non immobilisant : retour direct |
+| Documents | `EquipmentDocumentService`, `/documents` | responsable du suivi ; état « en renouvellement » (responsable obligatoire, échéance toujours affichée, clos à la saisie du nouveau document) ; type déclaré « non applicable » à un engin avec motif, distinct de « non renseigné » |
+| Coûts par chantier | `/costs` | classement filtrable par projet ; le projet est remis à vide quand l'engin change de site |
+
+Lot suivant : sauvegardes planifiées et restauration testée.
 
 ### Cycle de vie d'un OT et état de l'engin
 
@@ -197,6 +208,7 @@ Lots suivants : compléments flotte (fiche équipement, statuts, documents), sau
 | OT démarré | En maintenance |
 | OT en attente de pièce | Attente pièce |
 | OT terminé / annulé | recalculé d'après les autres OT ouverts, sinon Disponible |
-| Engin « Immobilisé » | ne change que par action manuelle (décision administrative) |
+| OT correctif ou immobilisant terminé | Remise en service à valider, puis Disponible après validation par une autre personne |
+| Engin « Immobilisé » ou « Hors service » | ne change que par action manuelle |
 
 Un technicien n'agit que sur les OT de ses sites qui lui sont assignés ou non assignés (il se les voit attribuer en les démarrant) ; l'annulation est réservée aux responsables.

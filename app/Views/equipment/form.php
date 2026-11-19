@@ -4,7 +4,7 @@
  * identité → modèle (qui apporte catégorie, compteur de suivi, indicateur et réservoir) → immatriculation
  * → compteurs et carburant → propriété et contrat → notes.
  * Panneau de synthèse fixe : ce que l'engin héritera réellement (et d'où), sections à compléter, actions.
- * @var array $item  @var int|null $id  @var array $sites  @var array $categories  @var array $brands  @var array $models  @var array $gauges
+ * @var array $item  @var int|null $id  @var array $sites  @var array $categories  @var array $brands  @var array $models  @var array $gauges  @var array $projects
  */
 $view->share('pageScripts', ['js/equipment-form.js']);
 $siteOptions = ['' => '—'];
@@ -17,11 +17,21 @@ $gaugeNames = array_column($gauges, 'name', 'id');
 $f = static fn (string $name, string $type = 'text', array $extra = []) => $view->partial('partials/field', $extra + [
     'name' => $name, 'labelKey' => 'fields.' . $name, 'type' => $type, 'value' => old($name, $item[$name] ?? null),
 ]);
+$projectOptions = ['' => '—'];
+foreach ($projects as $project) { $projectOptions[$project['id']] = $project['code'] . ' – ' . $project['name'] . ' (' . $project['site'] . ')'; }
+$infoLabels = ['plate_number' => 'fields.plate_number', 'chassis_number' => 'fields.chassis_number', 'serial_number' => 'fields.serial_number',
+    'year_made' => 'fields.year_made', 'power' => 'fields.power_value', 'capacity' => 'fields.capacity_value', 'color' => 'fields.color',
+    'commissioned_at' => 'fields.commissioned_at', 'acquired_at' => 'fields.acquired_at', 'owner_name' => 'fields.owner_name'];
+$powerUnits = ['hp' => 'power_unit.hp', 'kw' => 'power_unit.kw', 'kva' => 'power_unit.kva'];
+$capacityUnits = ['t' => 'capacity_unit.t', 'kg' => 'capacity_unit.kg', 'm3' => 'capacity_unit.m3', 'l' => 'capacity_unit.l', 'seats' => 'capacity_unit.seats'];
+$oldNa = old('not_applicable');
+$notApplicable = is_array($oldNa) ? array_map('strval', $oldNa) : \App\Domain\EquipmentInfo::notApplicable($item['not_applicable'] ?? null);
 $fieldError = static fn (string $name) => field_error($name) ? '<span class="error">' . e(field_error($name)) . '</span>' : '';
 $sections = [
     'identity' => ['equipment.section_identity', 'id-card'],
     'model' => ['equipment.section_model', 'boxes'],
     'registration' => ['equipment.section_registration', 'file-badge'],
+    'specs' => ['equipment.section_specs', 'ruler'],
     'meters' => ['equipment.section_meters', 'gauge'],
     'contract' => ['equipment.section_contract', 'file-signature'],
     'notes' => ['fields.notes', 'sticky-note'],
@@ -48,6 +58,8 @@ $sections = [
                 <?= $f('name', 'text', ['required' => true, 'attrs' => ['maxlength' => 150, 'placeholder' => t('equipment.name_placeholder'), 'data-summary' => 'name']]) ?>
                 <?= $f('site_id', 'select', ['required' => true, 'options' => $siteOptions, 'attrs' => ['data-summary' => 'site']]) ?>
                 <?= $f('commissioned_at', 'date') ?>
+                <?= $f('acquired_at', 'date', ['attrs' => ['max' => date('Y-m-d')]]) ?>
+                <?= $f('project_id', 'select', ['options' => $projectOptions, 'hint' => t('equipment.project_hint')]) ?>
             </div>
         </fieldset>
 
@@ -106,6 +118,29 @@ $sections = [
             </div>
         </fieldset>
 
+        <fieldset class="form-section" id="sec-specs">
+            <legend><i data-lucide="ruler"></i><?= e(t('equipment.section_specs')) ?></legend>
+            <div class="form-grid form-grid--3">
+                <?= $f('year_made', 'number', ['attrs' => ['min' => 1950, 'max' => 2100, 'step' => 1, 'inputmode' => 'numeric']]) ?>
+                <?= $f('color', 'text', ['attrs' => ['maxlength' => 40]]) ?>
+                <div></div>
+                <?= $f('power_value', 'number', ['attrs' => ['min' => '0.1', 'step' => '0.1', 'inputmode' => 'decimal']]) ?>
+                <?= $f('power_unit', 'select', ['options' => array_map('t', $powerUnits)]) ?>
+                <div></div>
+                <?= $f('capacity_value', 'number', ['attrs' => ['min' => '0.01', 'step' => '0.01', 'inputmode' => 'decimal']]) ?>
+                <?= $f('capacity_unit', 'select', ['options' => array_map('t', $capacityUnits)]) ?>
+            </div>
+            <div class="field">
+                <span class="label"><?= e(t('equipment.not_applicable')) ?></span>
+                <div class="check-group">
+                    <?php foreach ($infoLabels as $info => $labelKey): ?>
+                        <label class="check"><input type="checkbox" name="not_applicable[]" value="<?= e($info) ?>"<?= in_array($info, $notApplicable, true) ? ' checked' : '' ?>> <?= e(t($labelKey)) ?></label>
+                    <?php endforeach; ?>
+                </div>
+                <span class="hint"><?= e(t('equipment.not_applicable_hint')) ?></span>
+            </div>
+        </fieldset>
+
         <fieldset class="form-section" id="sec-meters">
             <legend><i data-lucide="gauge"></i><?= e(t('equipment.section_meters')) ?></legend>
             <div class="form-grid">
@@ -137,6 +172,8 @@ $sections = [
                 ?>
                 <?= $f('fuel_gauge_id', 'select', ['options' => $gaugeOptions, 'hint' => t('equipment.fuel_gauge_hint_short'), 'attrs' => ['data-inherit-gauge' => '']]) ?>
                 <?= $f('tank_capacity_l', 'number', ['attrs' => ['min' => 1, 'max' => 20000, 'step' => 1, 'inputmode' => 'numeric', 'data-inherit-capacity' => '']]) ?>
+                <?= $f('fuel_reference', 'number', ['attrs' => ['min' => '0.01', 'step' => '0.01', 'inputmode' => 'decimal'],
+                    'hint' => t('equipment.fuel_reference_hint') . (!empty($item['model_fuel_reference']) ? ' ' . t('equipment.fuel_reference_model', ['value' => format_number($item['model_fuel_reference'], 2)]) : '')]) ?>
             </div>
         </fieldset>
 
@@ -157,6 +194,7 @@ $sections = [
                     <?= $f('contract_start', 'date') ?>
                     <?= $f('contract_end', 'date') ?>
                 </div>
+                <?= $f('owner_name', 'text', ['class' => 'span-2', 'attrs' => ['maxlength' => 120], 'hint' => t('equipment.owner_hint')]) ?>
                 <?= $f('assignment', 'text', ['class' => 'span-2', 'attrs' => ['maxlength' => 150, 'placeholder' => t('equipment.assignment_placeholder')]]) ?>
             </div>
         </fieldset>

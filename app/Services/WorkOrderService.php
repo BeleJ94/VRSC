@@ -46,6 +46,7 @@ final class WorkOrderService
         private readonly Auth $auth,
         private readonly AssignmentRepository $assignments,
         private readonly PersonnelRepository $personnel,
+        private readonly EquipmentReleaseService $releases,
     ) {
     }
 
@@ -144,6 +145,7 @@ final class WorkOrderService
                 $remaining = $this->workOrders->openForEquipment((int) $wo['equipment_id'], $id);
                 $remaining[] = ['status' => 'open', 'immobilizing' => $data['immobilizing']];
                 $target = EquipmentStatusResolver::afterClosure(EquipmentStatus::from($equipment['status']), $remaining);
+                $target = $this->releases->gate($equipment, $target, null, false);
                 $this->equipmentService->applyStatus($equipment, $target, $wo['reference'], $id);
             }
             $this->logger->log('update', 'work_order', $id, (int) $wo['site_id'], $wo, $data + $wo, $wo['reference']);
@@ -215,6 +217,8 @@ final class WorkOrderService
             $newStatus = $target->isClosed()
                 ? EquipmentStatusResolver::afterClosure($current, $this->workOrders->openForEquipment((int) $equipment['id'], $id))
                 : EquipmentStatusResolver::onWorkOrderEvent($current, $target->equipmentStatus((bool) $wo['immobilizing']));
+            // Intervention corrective ou immobilisante terminée : l'engin attend la validation de sa remise en service.
+            $newStatus = $this->releases->gate($equipment, $newStatus, $wo, EquipmentReleaseService::requiredAfter($wo, $target));
             $this->equipmentService->applyStatus($equipment, $newStatus, $wo['reference'], $id);
 
             if ($target === WorkOrderStatus::Done && $wo['preventive_plan_id'] !== null) {

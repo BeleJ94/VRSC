@@ -3,6 +3,7 @@
 $kpis = [
     'expired' => ['kpi--alert', 'file-x', 'documents.hint_expired'],
     'soon' => ['kpi--warn', 'file-clock', 'documents.hint_soon'],
+    'renewing' => ['', 'hourglass', 'documents.hint_renewing'],
     'missing' => ['', 'file-question', 'documents.hint_missing'],
     'valid' => ['', 'file-check', 'documents.hint_valid'],
 ];

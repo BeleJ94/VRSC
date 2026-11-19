@@ -333,7 +333,7 @@ final class FleetTransferService
                 'INSERT INTO equipment_site_history (equipment_id, site_id, started_at, transfer_id) VALUES (:e, :s, :now, :t)',
                 ['e' => $equipmentId, 's' => $to, 'now' => $now, 't' => $id]
             );
-            $this->db->execute('UPDATE equipment SET site_id = :s WHERE id = :e', ['s' => $to, 'e' => $equipmentId]);
+            $this->db->execute('UPDATE equipment SET site_id = :s, project_id = NULL WHERE id = :e', ['s' => $to, 'e' => $equipmentId]);
             // Les conducteurs du site d'origine ne sont plus affectés ; les plans préventifs suivent l'engin.
             $this->db->execute('UPDATE equipment_assignments SET ended_at = :now WHERE equipment_id = :e AND ended_at IS NULL', ['now' => $now, 'e' => $equipmentId]);
             $this->db->execute('UPDATE preventive_plans SET site_id = :s WHERE equipment_id = :e', ['s' => $to, 'e' => $equipmentId]);

@@ -23,11 +23,15 @@ final class EquipmentRepository extends Repository
         e.ownership, e.contract_ref, e.contract_party, e.contract_start, e.contract_end, e.assignment, e.status, e.status_changed_at, e.notes, e.is_archived,
         e.created_at, e.updated_at, s.name AS site, s.code AS site_code, s.activity AS site_activity, c.name AS category, c.family AS category_family,
         e.meter_basis AS meter_basis_override, COALESCE(e.meter_basis, c.meter_basis, \'hours\') AS meter_basis,
-        e.fuel_gauge_id, e.tank_capacity_l, e.fuel_liters';
+        e.fuel_gauge_id, e.tank_capacity_l, e.fuel_liters,
+        e.project_id, p.code AS project_code, p.name AS project, e.year_made, e.power_value, e.power_unit, e.capacity_value, e.capacity_unit,
+        e.color, e.acquired_at, e.owner_name, e.not_applicable, e.fuel_reference, mo.fuel_reference AS model_fuel_reference';
 
     private const FROM = 'equipment e
         JOIN sites s ON s.id = e.site_id
-        LEFT JOIN equipment_categories c ON c.id = e.category_id';
+        LEFT JOIN equipment_categories c ON c.id = e.category_id
+        LEFT JOIN projects p ON p.id = e.project_id
+        LEFT JOIN equipment_models mo ON mo.id = e.model_id';
 
     public function datatable(DataTableRequest $dt, array $filters): array
     {
@@ -50,11 +54,18 @@ final class EquipmentRepository extends Repository
             $where[] = 'e.category_id = :f_cat';
             $fp['f_cat'] = (int) $filters['category_id'];
         }
+        if (!empty($filters['project_id'])) {
+            $where[] = 'e.project_id = :f_project';
+            $fp['f_project'] = (int) $filters['project_id'];
+        }
+        if (!empty($filters['incomplete'])) {
+            $where[] = \App\Domain\EquipmentInfo::missingSql('e');
+        }
 
         return $this->paginate(
             $dt,
             'e.id, e.code, e.name, e.brand, e.model, e.plate_number, e.status, e.status_changed_at, e.hour_meter, e.odometer_km,
-             s.name AS site, c.name AS category,
+             s.name AS site, c.name AS category, p.code AS project_code, ' . \App\Domain\EquipmentInfo::missingSql('e') . ' AS incomplete,
              (SELECT COUNT(*) FROM work_orders w WHERE w.equipment_id = e.id
                  AND w.status IN (\'open\', \'in_progress\', \'waiting_part\')) AS open_work_orders',
             self::FROM,
@@ -108,6 +119,18 @@ final class EquipmentRepository extends Repository
         );
     }
 
+    /** Projets / chantiers actifs des sites du périmètre (+ $includeId pour conserver celui d'un engin). */
+    public function projects(?int $includeId = null): array
+    {
+        [$scopeSql, $params] = $this->scope->clause('p.site_id');
+
+        return $this->db->fetchAll(
+            "SELECT p.id, p.code, p.name, p.site_id, s.name AS site FROM projects p JOIN sites s ON s.id = p.site_id
+              WHERE (p.is_active = 1 OR p.id = :inc) AND $scopeSql ORDER BY s.name, p.code",
+            ['inc' => $includeId ?? 0] + $params
+        );
+    }
+
     public function codeExists(string $code, ?int $exceptId = null): bool
     {
         return (bool) $this->db->fetchValue(
@@ -123,10 +146,12 @@ final class EquipmentRepository extends Repository
         return $this->db->insert(
             'INSERT INTO equipment (site_id, category_id, brand_id, model_id, code, name, brand, model, serial_number, chassis_number,
                                     plate_number, commissioned_at, hour_meter, odometer_km, meter_basis, fuel_gauge_id, tank_capacity_l, ownership, contract_ref, contract_party,
-                                    contract_start, contract_end, assignment, status, notes)
+                                    contract_start, contract_end, assignment, status, notes,
+                                    project_id, year_made, power_value, power_unit, capacity_value, capacity_unit, color, acquired_at, owner_name, not_applicable, fuel_reference)
              VALUES (:site_id, :category_id, :brand_id, :model_id, :code, :name, :brand, :model, :serial_number, :chassis_number,
                      :plate_number, :commissioned_at, :hour_meter, :odometer_km, :meter_basis, :fuel_gauge_id, :tank_capacity_l, :ownership, :contract_ref, :contract_party,
-                     :contract_start, :contract_end, :assignment, :status, :notes)',
+                     :contract_start, :contract_end, :assignment, :status, :notes,
+                     :project_id, :year_made, :power_value, :power_unit, :capacity_value, :capacity_unit, :color, :acquired_at, :owner_name, :not_applicable, :fuel_reference)',
             self::params($data) + ['status' => $data['status'] ?? 'available', 'odometer_km' => $data['odometer_km'] ?? null]
         );
     }
@@ -141,7 +166,10 @@ final class EquipmentRepository extends Repository
                     plate_number = :plate_number, commissioned_at = :commissioned_at, hour_meter = :hour_meter, meter_basis = :meter_basis,
                     fuel_gauge_id = :fuel_gauge_id, tank_capacity_l = :tank_capacity_l,
                     ownership = :ownership, contract_ref = :contract_ref, contract_party = :contract_party,
-                    contract_start = :contract_start, contract_end = :contract_end, assignment = :assignment, notes = :notes
+                    contract_start = :contract_start, contract_end = :contract_end, assignment = :assignment, notes = :notes,
+                    project_id = :project_id, year_made = :year_made, power_value = :power_value, power_unit = :power_unit,
+                    capacity_value = :capacity_value, capacity_unit = :capacity_unit, color = :color, acquired_at = :acquired_at,
+                    owner_name = :owner_name, not_applicable = :not_applicable, fuel_reference = :fuel_reference
               WHERE id = :id AND $scopeSql",
             self::params($data) + ['id' => $id] + $params
         );
@@ -342,6 +370,17 @@ final class EquipmentRepository extends Repository
             'fuel_gauge_id' => $data['fuel_gauge_id'] ?? null,
             'tank_capacity_l' => $data['tank_capacity_l'] ?? null,
             'notes' => $data['notes'] ?? null,
+            'project_id' => $data['project_id'] ?? null,
+            'year_made' => $data['year_made'] ?? null,
+            'power_value' => $data['power_value'] ?? null,
+            'power_unit' => $data['power_unit'] ?? null,
+            'capacity_value' => $data['capacity_value'] ?? null,
+            'capacity_unit' => $data['capacity_unit'] ?? null,
+            'color' => $data['color'] ?? null,
+            'acquired_at' => $data['acquired_at'] ?? null,
+            'owner_name' => $data['owner_name'] ?? null,
+            'not_applicable' => $data['not_applicable'] ?? null,
+            'fuel_reference' => $data['fuel_reference'] ?? null,
         ];
     }
 }

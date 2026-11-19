@@ -24,6 +24,7 @@ final class DocumentController extends Controller
         private readonly EquipmentDocumentService $service,
         private readonly EquipmentRepository $equipment,
         private readonly SiteRepository $sites,
+        private readonly \App\Repositories\UserRepository $users,
     ) {
         parent::__construct($ctx);
     }
@@ -49,7 +50,7 @@ final class DocumentController extends Controller
         $canManage = $this->user()->can('documents.manage');
         foreach ($result['data'] as &$row) {
             $row['file_url'] = $row['file_name'] !== null ? url('/equipment/' . $row['equipment_id'] . '/documents/' . $row['id'] . '/file') : null;
-            $row['renew_url'] = $canManage ? url('/documents/create', ['equipment_id' => $row['equipment_id'], 'document_type_id' => $row['document_type_id']]) : null;
+            $row['renew_url'] = $canManage && $row['state'] !== 'not_applicable' ? url('/documents/create', ['equipment_id' => $row['equipment_id'], 'document_type_id' => $row['document_type_id']]) : null;
             unset($row['file_name']);
         }
 
@@ -66,6 +67,7 @@ final class DocumentController extends Controller
             'equipment' => $equipment,
             'types' => $this->documents->types(),
             'typeId' => $request->int('document_type_id'),
+            'responsibles' => $this->users->listActive(),
         ]);
     }
 

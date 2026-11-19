@@ -1618,3 +1618,18 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
 /* Zones réservées à l'impression (signatures des bons) */
 .print-only { display: none; }
 @media print { .print-only { display: block; } .chips, [data-approval-form] { display: none !important; } }
+
+/* Lot 7 : remise en service à valider, hors service, document en renouvellement */
+:root { --st-pending-release: #6941C6; --st-out-of-service: #344054; }
+.badge--pending_release { color: var(--st-pending-release); background: #F1EBFD; }
+.badge--out_of_service { color: #FFFFFF; background: var(--st-out-of-service); }
+.status-bar__seg--pending_release { background: var(--st-pending-release); }
+.status-bar__seg--out_of_service { background: var(--st-out-of-service); }
+.chip-btn--pending_release[aria-pressed="true"] { background: var(--st-pending-release); border-color: var(--st-pending-release); }
+.chip-btn--out_of_service[aria-pressed="true"] { background: var(--st-out-of-service); border-color: var(--st-out-of-service); }
+.fleet-tile--pending_release::before { background: var(--st-pending-release); }
+.fleet-tile--out_of_service::before { background: var(--st-out-of-service); }
+.dot--pending_release { background: var(--st-pending-release); }
+.dot--out_of_service { background: var(--st-out-of-service); }
+.doc-list__item--renewing { border-left-color: var(--st-pending-release); }
+.check-group { display: flex; flex-wrap: wrap; gap: 6px 18px; }

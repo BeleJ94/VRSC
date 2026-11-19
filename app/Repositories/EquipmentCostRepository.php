@@ -101,6 +101,10 @@ final class EquipmentCostRepository extends Repository
             $where[] = 'x.category_id = :f_cat';
             $fp['f_cat'] = (int) $filters['category_id'];
         }
+        if (!empty($filters['project_id'])) {
+            $where[] = 'x.project_id = :f_project';
+            $fp['f_project'] = (int) $filters['project_id'];
+        }
         if (($filters['flag'] ?? '') === 'missing') {
             $where[] = '(x.missing_count > 0 OR x.usage_value IS NULL)';
         } elseif (($filters['flag'] ?? '') === 'alert') {
@@ -174,6 +178,7 @@ final class EquipmentCostRepository extends Repository
                         SELECT w.*, CASE WHEN w.meter_basis = 'km' THEN w.km_end - w.km_start ELSE w.hours_end - w.hours_start END AS usage_value
                           FROM (
                             SELECT e.id, e.code, e.name, e.site_id, s.name AS site, e.category_id, cat.name AS category,
+                                   e.project_id, (SELECT pj.code FROM projects pj WHERE pj.id = e.project_id) AS project_code,
                                    COALESCE(e.meter_basis, cat.meter_basis, 'hours') AS meter_basis,
                                    COALESCE(e.fuel_reference, mo.fuel_reference) AS fuel_reference,
                                    sn.equipment_id IS NOT NULL AS is_closed,

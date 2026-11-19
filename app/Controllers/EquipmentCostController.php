@@ -92,8 +92,9 @@ final class EquipmentCostController extends Controller
             'period' => $period,
             'sites' => $this->sites->listActive(),
             'categories' => $this->equipment->categories(),
+            'projects' => $this->equipment->projects(),
             'totals' => $this->costs->monthlyTotals($period, $siteId),
-            'filters' => ['site_id' => $siteId, 'category_id' => $request->int('category_id'), 'flag' => $request->string('flag')],
+            'filters' => ['site_id' => $siteId, 'category_id' => $request->int('category_id'), 'project_id' => $request->int('project_id'), 'flag' => $request->string('flag')],
             'closing' => $siteId !== null ? $this->costs->closing($siteId, $period) : null,
             'canClose' => $siteId !== null && $period < date('Y-m') && $user->canAt('costs.close', $siteId),
         ]);
@@ -107,6 +108,7 @@ final class EquipmentCostController extends Controller
         return $this->json($this->costs->monthly($dt, self::period($request), [
             'site_id' => $this->siteFilter($request),
             'category_id' => $request->int('category_id'),
+            'project_id' => $request->int('project_id'),
             'flag' => in_array($flag, ['missing', 'alert'], true) ? $flag : null,
         ]));
     }

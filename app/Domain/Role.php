@@ -46,7 +46,7 @@ enum Role: string
         'approvals.use' => ['admin', 'manager', 'technician', ...self::VRSC],
         'approvals.override' => ['admin', 'logistics'],
         'attachments.view' => ['admin', 'manager', 'technician', 'viewer', ...self::VRSC],
-        'equipment.view' => ['admin', 'manager', 'technician', 'viewer'],
+        'equipment.view' => ['admin', 'manager', 'technician', 'viewer', 'supervisor', 'logistics', 'director'],
         'equipment.manage' => ['admin', 'manager'],
         'equipment.status' => ['admin', 'manager', 'technician'],
         'equipment.reading' => ['admin', 'manager', 'technician'],

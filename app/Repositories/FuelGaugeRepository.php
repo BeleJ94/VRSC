@@ -53,11 +53,11 @@ final class FuelGaugeRepository extends Repository
         );
     }
 
-    public function setModelFuel(int $modelId, ?int $gaugeId, ?int $capacity): void
+    public function setModelFuel(int $modelId, ?int $gaugeId, ?int $capacity, ?float $fuelReference = null): void
     {
         $this->db->execute(
-            'UPDATE equipment_models SET fuel_gauge_id = :g, tank_capacity_l = :c WHERE id = :id',
-            ['g' => $gaugeId, 'c' => $capacity, 'id' => $modelId]
+            'UPDATE equipment_models SET fuel_gauge_id = :g, tank_capacity_l = :c, fuel_reference = :r WHERE id = :id',
+            ['g' => $gaugeId, 'c' => $capacity, 'r' => $fuelReference, 'id' => $modelId]
         );
     }
 

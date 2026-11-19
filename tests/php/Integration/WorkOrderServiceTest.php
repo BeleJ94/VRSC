@@ -57,6 +57,13 @@ final class WorkOrderServiceTest extends DatabaseTestCase
         self::assertSame(1, (int) $this->value("SELECT COUNT(*) FROM activity_log WHERE entity_type = 'equipment' AND action = 'status'"));
     }
 
+    /** Validation de la remise en service par le responsable du site. */
+    private function approveRelease(): void
+    {
+        $requestId = (int) $this->value("SELECT id FROM approval_requests WHERE entity_type = 'equipment_release' AND status = 'pending' ORDER BY id DESC LIMIT 1");
+        $this->service($this->manager, \App\Services\ApprovalWorkflow::class)->act($requestId, ['decision' => 'favorable']);
+    }
+
     public function testReferencesAreSequential(): void
     {
         $a = $this->wo($this->tech)->create(['equipment_id' => $this->equipment, 'title' => 'A']);
@@ -89,6 +96,9 @@ final class WorkOrderServiceTest extends DatabaseTestCase
         $wo = $this->row('SELECT * FROM work_orders WHERE id = :id', ['id' => $id]);
         self::assertSame(['done', 'Joint changé', 90], [$wo['status'], $wo['resolution'], (int) $wo['labor_minutes']]);
         self::assertNotNull($wo['completed_at']);
+        // Intervention immobilisante terminée : la remise en service est validée par une autre personne (lot 7).
+        self::assertSame('pending_release', $this->equipmentStatus());
+        $this->approveRelease();
         self::assertSame('available', $this->equipmentStatus());
         self::assertSame(1042, (int) $this->value('SELECT hour_meter FROM equipment WHERE id = :id', ['id' => $this->equipment]));
 
@@ -115,6 +125,8 @@ final class WorkOrderServiceTest extends DatabaseTestCase
         self::assertSame('breakdown', $this->equipmentStatus(), 'Le premier OT immobilisant reste ouvert');
 
         $this->wo($this->tech)->transition($first, ['status' => 'done', 'resolution' => 'ok']);
+        self::assertSame('pending_release', $this->equipmentStatus());
+        $this->approveRelease();
         self::assertSame('available', $this->equipmentStatus());
     }
 

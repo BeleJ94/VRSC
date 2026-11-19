@@ -29,6 +29,22 @@
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="field">
+            <label for="filter-project"><?= e(t('fields.project_id')) ?></label>
+            <select id="filter-project" name="project_id" class="input" data-filter>
+                <option value=""><?= e(t('common.all')) ?></option>
+                <?php foreach ($projects as $project): ?>
+                    <option value="<?= e($project['id']) ?>"><?= e($project['code'] . ' – ' . $project['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="field">
+            <label for="filter-incomplete"><?= e(t('equipment.sheet')) ?></label>
+            <select id="filter-incomplete" name="incomplete" class="input" data-filter>
+                <option value=""><?= e(t('common.all')) ?></option>
+                <option value="1"<?= $filters['incomplete'] ? ' selected' : '' ?>><?= e(t('equipment.sheet_incomplete')) ?></option>
+            </select>
+        </div>
     </form>
     <div class="table-wrap">
         <table class="display" style="width:100%" data-table="equipment" data-source="<?= e(url('/equipment/data')) ?>" data-row-link="<?= e(url('/equipment/{id}')) ?>"></table>

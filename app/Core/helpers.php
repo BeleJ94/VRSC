@@ -114,6 +114,7 @@ function document_badge(?array $document): string
         'expired' => ['breakdown', t('documents.expired_since', ['days' => -$days])],
         'soon' => ['waiting_part', t('documents.days_left', ['days' => $days])],
         'valid' => ['available', t('documents.valid')],
+        'renewing' => ['pending_release', t('documents.renewing') . ($days !== null ? ' · ' . ($days < 0 ? t('documents.expired_since', ['days' => -$days]) : t('documents.days_left', ['days' => $days])) : '')],
         default => ['neutral', t('documents.no_expiry')],
     };
 

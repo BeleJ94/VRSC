@@ -17,9 +17,11 @@
     breakdown: '#B42318',
     maintenance: '#1F4E79',
     waiting_part: '#B54708',
-    immobilized: '#8D9098'
+    immobilized: '#8D9098',
+    pending_release: '#6941C6',
+    out_of_service: '#344054'
   };
-  var STATUS_ORDER = ['available', 'breakdown', 'maintenance', 'waiting_part', 'immobilized'];
+  var STATUS_ORDER = ['available', 'breakdown', 'maintenance', 'waiting_part', 'immobilized', 'pending_release', 'out_of_service'];
 
   /** Couleur de pastille d'un statut d'OT (reprend l'état d'engin correspondant). */
   var WO_STATUS_CLASS = {

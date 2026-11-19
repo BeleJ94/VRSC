@@ -46,7 +46,8 @@ test('badge : classes de la charte et libellé échappé', () => {
 
 test('couleurs d’état imposées', () => {
   assert.deepEqual(Core.STATUS_COLORS, {
-    available: '#1E7A4C', breakdown: '#B42318', maintenance: '#1F4E79', waiting_part: '#B54708', immobilized: '#8D9098'
+    available: '#1E7A4C', breakdown: '#B42318', maintenance: '#1F4E79', waiting_part: '#B54708', immobilized: '#8D9098',
+    pending_release: '#6941C6', out_of_service: '#344054'
   });
   assert.deepEqual(Core.STATUS_ORDER, Object.keys(Core.STATUS_COLORS));
 });

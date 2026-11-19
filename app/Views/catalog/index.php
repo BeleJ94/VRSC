@@ -136,6 +136,8 @@ $tabs = [
                         <div class="catalog-tank">
                             <input type="number" name="tank_capacity_l" form="<?= e($formId) ?>" class="input input--sm input--num" min="1" max="20000" value="<?= e($model['tank_capacity_l']) ?>" placeholder="—" data-dirty-watch aria-label="<?= e(t('fields.tank_capacity_l')) ?>">
                             <span class="muted small">L</span>
+                            <input type="number" name="fuel_reference" form="<?= e($formId) ?>" class="input input--sm input--num" min="0.01" step="0.01" value="<?= e($model['fuel_reference']) ?>" placeholder="—" data-dirty-watch aria-label="<?= e(t('fields.fuel_reference')) ?>" title="<?= e(t('fields.fuel_reference')) ?>">
+                            <span class="muted small"><?= e(t('catalog.fuel_reference_unit')) ?></span>
                             <form method="post" action="<?= e(url('/catalog/models/' . $model['id'] . '/fuel')) ?>" id="<?= e($formId) ?>" data-confirm-title="<?= e(t('catalog.confirm_model_fuel', ['model' => $model['brand'] . ' ' . $model['name']])) ?>" data-confirm="<?= e(t('catalog.confirm_model_fuel_lead', ['n' => $model['equipment_count']])) ?>">
                                 <?= csrf_field() ?>
                                 <button type="submit" class="btn btn--sm btn--primary" data-dirty-save hidden><i data-lucide="check"></i><?= e(t('common.save')) ?></button>

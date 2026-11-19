@@ -29,10 +29,13 @@
           { data: 'code', title: t('fields.code'), html: function (r) { return '<strong>' + esc(r.code) + '</strong>'; } },
           { data: 'name', title: t('fields.name'), html: function (r) {
             var sub = [r.brand, r.model].filter(Boolean).join(' ');
-            return esc(r.name) + (sub ? '<br><span class="muted">' + esc(sub) + '</span>' : '');
+            return esc(r.name) + (sub ? '<br><span class="muted">' + esc(sub) + '</span>' : '')
+              + (Number(r.incomplete) ? ' <span class="badge badge--waiting_part">' + esc(t('js.equipment.incomplete')) + '</span>' : '');
           }, text: function (r) { return r.name; } },
           { data: 'category', title: t('fields.category_id') },
-          { data: 'site', title: t('fields.site_id') },
+          { data: 'site', title: t('fields.site_id'), html: function (r) {
+            return esc(r.site) + (r.project_code ? '<br><span class="muted">' + esc(r.project_code) + '</span>' : '');
+          }, text: function (r) { return [r.site, r.project_code].filter(Boolean).join(' – '); } },
           { data: 'status', title: t('fields.status'),
             html: function (r) { return Core.badge('status', r.status, t); },
             text: function (r) { return label('status')(r, 'status'); } },
@@ -57,8 +60,9 @@
           }, text: function (r) { return [r.issuer, r.reference].filter(Boolean).join(' – '); } },
           { data: 'expires_at', title: t('fields.expires_at'), text: function (r) { return date(r.expires_at); } },
           { data: 'state', title: t('fields.status'), html: function (r) {
-            var cls = { expired: 'breakdown', soon: 'waiting_part', valid: 'available' }[r.state] || 'neutral';
-            return '<span class="badge badge--' + cls + '">' + esc(r.state_label) + '</span>';
+            var cls = { expired: 'breakdown', soon: 'waiting_part', valid: 'available', renewing: 'pending_release' }[r.state] || 'neutral';
+            var who = r.state === 'renewing' && r.responsible ? r.responsible : (r.state === 'not_applicable' ? r.exemption_reason : '');
+            return '<span class="badge badge--' + cls + '">' + esc(r.state_label) + '</span>' + (who ? '<br><span class="muted">' + esc(who) + '</span>' : '');
           }, text: function (r) { return r.state_label; } },
           { data: 'file_url', title: t('fields.document_file'), orderable: false, className: 'dt-right nowrap', html: function (r) {
             var out = '';
@@ -416,8 +420,9 @@
             return '<strong>' + esc(r.code) + '</strong><br><span class="muted">' + esc(r.name) + '</span>';
           }, text: function (r) { return r.code + ' – ' + r.name; } },
           { data: 'site', title: t('fields.site_id'), html: function (r) {
-            return esc(r.site) + (r.category ? '<br><span class="muted">' + esc(r.category) + '</span>' : '');
-          }, text: function (r) { return [r.site, r.category].filter(Boolean).join(' – '); } },
+            var sub = [r.category, r.project_code].filter(Boolean).join(' · ');
+            return esc(r.site) + (sub ? '<br><span class="muted">' + esc(sub) + '</span>' : '');
+          }, text: function (r) { return [r.site, r.category, r.project_code].filter(Boolean).join(' – '); } },
           { data: 'usage_value', title: t('js.costs.usage'), className: 'dt-right', html: function (r) {
             if (r.usage_value === null || r.usage_value === undefined) return missing(t);
             return esc(num(r.usage_value)) + ' ' + esc(costUnit(r));

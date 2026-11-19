@@ -68,6 +68,10 @@ return static function (Router $r): void {
     $r->post('/equipment/{id}/documents/{documentId}', [EquipmentController::class, 'updateDocument'], ['permission' => 'documents.manage']);
     $r->get('/equipment/{id}/documents/{documentId}/file', [EquipmentController::class, 'documentFile'], ['permission' => 'equipment.view']);
     $r->post('/equipment/{id}/documents/{documentId}/delete', [EquipmentController::class, 'deleteDocument'], ['permission' => 'documents.manage']);
+    $r->post('/equipment/{id}/documents/{documentId}/renewal', [EquipmentController::class, 'documentRenewal'], ['permission' => 'documents.manage']);
+    $r->post('/equipment/{id}/document-exemptions', [EquipmentController::class, 'exemptDocument'], ['permission' => 'documents.manage']);
+    $r->post('/equipment/{id}/document-exemptions/{typeId}/delete', [EquipmentController::class, 'unexemptDocument'], ['permission' => 'documents.manage']);
+    $r->get('/equipment/releases/{id}', [EquipmentController::class, 'release'], ['permission' => 'equipment.view']);
     $r->post('/equipment/{id}/photos', [EquipmentController::class, 'uploadPhoto'], ['permission' => 'equipment.photo']);
     $r->get('/equipment/{id}/photos/{photoId}', [EquipmentController::class, 'photo'], ['permission' => 'equipment.view']);
     $r->post('/equipment/{id}/photos/{photoId}/primary', [EquipmentController::class, 'primaryPhoto'], ['permission' => 'equipment.photo']);

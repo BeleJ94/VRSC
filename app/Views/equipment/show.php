@@ -1,7 +1,7 @@
 <?php
 /**
  * @var array $item  @var array $history  @var array $workOrders  @var array $plans  @var array $activity
- * @var array $photos  @var array $readings  @var \App\Domain\EquipmentStatus[] $statuses
+ * @var array $photos  @var array $readings  @var \App\Domain\EquipmentStatus[] $statuses  @var array|null $release  @var array $infoStates  @var array $responsibles
  */
 $view->share('pageScripts', ['js/pm-fuel.js', 'js/equipment-readings.js']);
 $eqUrl = '/equipment/' . $item['id'];
@@ -33,6 +33,9 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
             <?php if ($item['category']): ?><span class="tag"><i data-lucide="layers"></i><?= e($item['category']) ?></span><?php endif; ?>
             <?php if ($item['plate_number']): ?><span class="tag tag--plate"><?= e($item['plate_number']) ?></span><?php endif; ?>
             <span class="tag"><i data-lucide="clock"></i><?= e(t('equipment.since', ['date' => format_date($item['status_changed_at'], true)])) ?></span>
+            <?php if ($item['project']): ?><span class="tag"><i data-lucide="hard-hat"></i><?= e($item['project_code'] . ' – ' . $item['project']) ?></span><?php endif; ?>
+            <?php $missingInfo = count(array_keys($infoStates, 'missing', true)); ?>
+            <?php if ($missingInfo > 0): ?><span class="badge badge--waiting_part"><?= e(t('equipment.missing_info', ['count' => $missingInfo])) ?></span><?php endif; ?>
         </div>
     </div>
     <div class="eq-hero__actions">
@@ -148,15 +151,51 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
             <?php endif; ?>
         </section>
 
+        <?php if ($release !== null && ($release['status'] === 'pending' || ($release['status'] === 'rejected' && $item['status'] === 'breakdown'))): ?>
+        <section class="card" id="release">
+            <div class="card__title">
+                <h2><?= e(t('release.title')) ?> · <span class="mono"><?= e($release['reference']) ?></span></h2>
+                <span class="badge badge--<?= $release['status'] === 'pending' ? 'pending_release' : 'breakdown' ?>"><?= e($release['status'] === 'pending' ? t('release.pending') : t('release.rejected')) ?></span>
+            </div>
+            <p><?= e($release['status'] === 'pending' ? t('release.pending_hint') : t('release.rejected_hint')) ?></p>
+            <p class="muted small">
+                <?php if ($release['work_order_id']): ?><a href="<?= e(url('/work-orders/' . $release['work_order_id'])) ?>"><?= e($release['work_order_ref']) ?></a><?php else: ?><?= e($release['reason']) ?><?php endif; ?>
+                · <?= e(format_date($release['requested_at'], true)) ?>
+            </p>
+        </section>
+        <?= $view->partial('partials/approval', ['approval' => $release['approval']]) ?>
+        <?php endif; ?>
+
+        <?php
+        // Une information vide est soit « non applicable » (déclarée), soit « manquante » : jamais un simple tiret.
+        $info = static function (string $field, ?string $display) use ($infoStates): string {
+            return match ($infoStates[$field]) {
+                'filled' => e($display),
+                'na' => '<span class="muted">' . e(t('equipment.info_na')) . '</span>',
+                default => '<span class="badge badge--waiting_part">' . e(t('equipment.info_missing')) . '</span>',
+            };
+        };
+        $powerUnits = ['hp' => 'power_unit.hp', 'kw' => 'power_unit.kw', 'kva' => 'power_unit.kva'];
+        $capacityUnits = ['t' => 'capacity_unit.t', 'kg' => 'capacity_unit.kg', 'm3' => 'capacity_unit.m3', 'l' => 'capacity_unit.l', 'seats' => 'capacity_unit.seats'];
+        $fuelReference = $item['fuel_reference'] ?? $item['model_fuel_reference'];
+        ?>
         <section class="card">
             <div class="card__title"><h2><?= e(t('equipment.details')) ?></h2></div>
             <dl class="dl dl--2col">
                 <dt><?= e(t('fields.brand_id')) ?> / <?= e(t('fields.model_id')) ?></dt><dd><?= e(trim(($item['brand'] ?? '') . ' ' . ($item['model'] ?? '')) ?: '—') ?></dd>
                 <dt><?= e(t('fields.category_id')) ?></dt><dd><?= e($item['category'] ?? '—') ?></dd>
-                <dt><?= e(t('fields.chassis_number')) ?></dt><dd class="mono"><?= e($item['chassis_number'] ?? '—') ?></dd>
-                <dt><?= e(t('fields.plate_number')) ?></dt><dd class="mono"><?= e($item['plate_number'] ?? '—') ?></dd>
-                <dt><?= e(t('fields.serial_number')) ?></dt><dd class="mono"><?= e($item['serial_number'] ?? '—') ?></dd>
-                <dt><?= e(t('fields.commissioned_at')) ?></dt><dd><?= e(format_date($item['commissioned_at']) ?: '—') ?></dd>
+                <dt><?= e(t('fields.chassis_number')) ?></dt><dd class="mono"><?= $info('chassis_number', $item['chassis_number']) ?></dd>
+                <dt><?= e(t('fields.plate_number')) ?></dt><dd class="mono"><?= $info('plate_number', $item['plate_number']) ?></dd>
+                <dt><?= e(t('fields.serial_number')) ?></dt><dd class="mono"><?= $info('serial_number', $item['serial_number']) ?></dd>
+                <dt><?= e(t('fields.year_made')) ?></dt><dd><?= $info('year_made', (string) $item['year_made']) ?></dd>
+                <dt><?= e(t('fields.power_value')) ?></dt><dd><?= $info('power', $item['power_value'] !== null ? format_number($item['power_value'], 1) . ' ' . t($powerUnits[$item['power_unit']] ?? 'power_unit.hp') : null) ?></dd>
+                <dt><?= e(t('fields.capacity_value')) ?></dt><dd><?= $info('capacity', $item['capacity_value'] !== null ? format_number($item['capacity_value'], 2) . ' ' . t($capacityUnits[$item['capacity_unit']] ?? 'capacity_unit.t') : null) ?></dd>
+                <dt><?= e(t('fields.color')) ?></dt><dd><?= $info('color', $item['color']) ?></dd>
+                <dt><?= e(t('fields.commissioned_at')) ?></dt><dd><?= $info('commissioned_at', format_date($item['commissioned_at'])) ?></dd>
+                <dt><?= e(t('fields.acquired_at')) ?></dt><dd><?= $info('acquired_at', format_date($item['acquired_at'])) ?></dd>
+                <dt><?= e(t('fields.owner_name')) ?></dt><dd><?= $info('owner_name', $item['owner_name']) ?></dd>
+                <dt><?= e(t('fields.project_id')) ?></dt><dd><?= $item['project'] ? e($item['project_code'] . ' – ' . $item['project']) : '—' ?></dd>
+                <dt><?= e(t('fields.fuel_reference')) ?></dt><dd><?= $fuelReference !== null ? e(format_number($fuelReference, 2)) . ' ' . e($item['meter_basis'] === 'km' ? 'L/100 km' : 'L/h') . ($item['fuel_reference'] === null ? ' <span class="muted small">(' . e(t('equipment.from_model')) . ')</span>' : '') : '<span class="badge badge--waiting_part">' . e(t('equipment.info_missing')) . '</span>' ?></dd>
                 <dt><?= e(t('fields.assignment')) ?></dt><dd><?= e($item['assignment'] ?? '—') ?></dd>
                 <dt><?= e(t('fields.ownership')) ?></dt><dd><?= e(t('ownership.' . $item['ownership'])) ?></dd>
                 <?php if ($item['ownership'] !== 'owned'): ?>
@@ -226,14 +265,26 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
                     <li class="doc-list__item<?= $doc !== null ? ' doc-list__item--' . e($doc['state']) : '' ?>">
                         <div class="doc-list__head">
                             <strong><?= e(doc_type_label($group['type'])) ?></strong>
-                            <?= document_badge($doc) ?>
+                            <?= $doc === null && $group['exemption'] !== null ? '<span class="badge badge--neutral">' . e(t('documents.not_applicable')) . '</span>' : document_badge($doc) ?>
                         </div>
+                        <?php if ($doc === null && $group['exemption'] !== null): ?>
+                            <div class="muted small"><?= e($group['exemption']) ?></div>
+                            <?php if ($documentTypes !== []): ?>
+                                <form method="post" action="<?= e(url($eqUrl . '/document-exemptions/' . $group['type']['id'] . '/delete')) ?>" class="doc-list__tools">
+                                    <?= csrf_field() ?><button type="submit" class="btn btn--sm"><i data-lucide="undo-2"></i><?= e(t('documents.unexempt')) ?></button>
+                                </form>
+                            <?php endif; ?>
+                        <?php endif; ?>
                         <?php if ($doc !== null): ?>
                             <div class="doc-list__meta">
                                 <?= e(implode(' · ', array_filter([$doc['issuer'], $doc['reference']]))) ?>
                                 <?php if ($doc['expires_at']): ?><span class="nowrap"><?= e(t('documents.until', ['date' => format_date($doc['expires_at'])])) ?></span><?php endif; ?>
                             </div>
                             <?php if ($doc['note']): ?><div class="muted small"><?= e($doc['note']) ?></div><?php endif; ?>
+                            <?php if ($doc['responsible']): ?><div class="muted small"><i data-lucide="user"></i> <?= e(t('documents.responsible', ['name' => $doc['responsible']])) ?></div><?php endif; ?>
+                            <?php if ($doc['renewal_started_at']): ?>
+                                <div class="small"><?= e(t('documents.renewing_since', ['date' => format_date($doc['renewal_started_at'])])) ?><?= $doc['renewal_note'] ? ' — ' . e($doc['renewal_note']) : '' ?></div>
+                            <?php endif; ?>
                             <?php if ($doc['file_name']): ?>
                                 <a class="doc-file small" href="<?= e(url($eqUrl . '/documents/' . $doc['id'] . '/file')) ?>" target="_blank" rel="noopener"><i data-lucide="paperclip"></i><?= e($doc['original_name'] ?: t('documents.current_file')) ?></a>
                             <?php endif; ?>
@@ -242,6 +293,17 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
                             <div class="doc-list__tools">
                                 <?php if ($documentTypes !== []): ?>
                                     <button type="button" class="btn btn--sm" data-open="#doc-add-<?= e($group['type']['id']) ?>"><i data-lucide="<?= $doc ? 'refresh-cw' : 'plus' ?>"></i><?= e($doc ? t('documents.renew') : t('common.add')) ?></button>
+                                    <?php if ($doc === null && $group['exemption'] === null): ?>
+                                        <button type="button" class="btn btn--sm" data-open="#doc-na-<?= e($group['type']['id']) ?>"><i data-lucide="ban"></i><?= e(t('documents.not_applicable')) ?></button>
+                                    <?php endif; ?>
+                                    <?php if ($doc !== null && $doc['renewal_started_at'] === null): ?>
+                                        <button type="button" class="btn btn--sm" data-open="#doc-renewal-<?= e($doc['id']) ?>"><i data-lucide="hourglass"></i><?= e(t('documents.start_renewal')) ?></button>
+                                    <?php elseif ($doc !== null): ?>
+                                        <form method="post" action="<?= e(url($eqUrl . '/documents/' . $doc['id'] . '/renewal')) ?>">
+                                            <?= csrf_field() ?><input type="hidden" name="renewing" value="0">
+                                            <button type="submit" class="btn btn--sm"><i data-lucide="x"></i><?= e(t('documents.end_renewal')) ?></button>
+                                        </form>
+                                    <?php endif; ?>
                                     <?php if ($doc !== null): ?>
                                         <button type="button" class="icon-btn" data-open="#doc-edit-<?= e($doc['id']) ?>" title="<?= e(t('common.edit')) ?>" aria-label="<?= e(t('common.edit')) ?>"><i data-lucide="pencil"></i></button>
                                         <form method="post" action="<?= e(url($eqUrl . '/documents/' . $doc['id'] . '/delete')) ?>" data-confirm="<?= e(t('documents.delete_confirm')) ?>">
@@ -525,7 +587,7 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
 
 <?php if ($documentTypes !== []): ?>
 <?php
-$documentForm = static function (string $action, string $titleText, array $doc, int $typeId) use ($documentTypes, $item, $view, $eqUrl): string {
+$documentForm = static function (string $action, string $titleText, array $doc, int $typeId) use ($documentTypes, $item, $view, $eqUrl, $responsibles): string {
     ob_start(); ?>
     <form method="post" action="<?= e(url($action)) ?>" class="grid" style="text-align:left" enctype="multipart/form-data">
         <?= csrf_field() ?>
@@ -539,7 +601,7 @@ $documentForm = static function (string $action, string $titleText, array $doc, 
             </select>
         </div>
         <div class="form-grid">
-            <?= $view->partial('partials/document_fields', ['doc' => $doc,
+            <?= $view->partial('partials/document_fields', ['doc' => $doc, 'responsibles' => $responsibles,
                 'fileUrl' => !empty($doc['file_name']) ? url($eqUrl . '/documents/' . $doc['id'] . '/file') : null]) ?>
         </div>
     </form>
@@ -555,6 +617,40 @@ $documentForm = static function (string $action, string $titleText, array $doc, 
     <?php if ($prev !== null): ?>
         <template id="doc-edit-<?= e($prev['id']) ?>">
             <?= $documentForm($eqUrl . '/documents/' . $prev['id'], t('documents.edit'), $prev, (int) $group['type']['id']) ?>
+        </template>
+        <template id="doc-renewal-<?= e($prev['id']) ?>">
+            <form method="post" action="<?= e(url($eqUrl . '/documents/' . $prev['id'] . '/renewal')) ?>" class="grid" style="text-align:left">
+                <?= csrf_field() ?>
+                <input type="hidden" name="renewing" value="1">
+                <h3 class="dialog-title"><i data-lucide="hourglass"></i><?= e(t('documents.start_renewal')) ?> · <?= e(doc_type_label($group['type'])) ?></h3>
+                <div class="field">
+                    <label class="required"><?= e(t('fields.responsible_id')) ?></label>
+                    <select name="responsible_id" class="input" required>
+                        <option value="">—</option>
+                        <?php foreach ($responsibles as $person): ?>
+                            <option value="<?= e($person['id']) ?>"<?= (int) $person['id'] === (int) $prev['responsible_id'] ? ' selected' : '' ?>><?= e($person['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="field">
+                    <label><?= e(t('fields.note')) ?></label>
+                    <input name="renewal_note" class="input" maxlength="255">
+                </div>
+                <p class="hint"><?= e(t('documents.renewal_hint')) ?></p>
+            </form>
+        </template>
+    <?php elseif ($group['exemption'] === null): ?>
+        <template id="doc-na-<?= e($group['type']['id']) ?>">
+            <form method="post" action="<?= e(url($eqUrl . '/document-exemptions')) ?>" class="grid" style="text-align:left">
+                <?= csrf_field() ?>
+                <input type="hidden" name="document_type_id" value="<?= e($group['type']['id']) ?>">
+                <h3 class="dialog-title"><i data-lucide="ban"></i><?= e(t('documents.not_applicable')) ?> · <?= e(doc_type_label($group['type'])) ?></h3>
+                <div class="field">
+                    <label class="required"><?= e(t('fields.reason')) ?></label>
+                    <input name="reason" class="input" required maxlength="255">
+                </div>
+                <p class="hint"><?= e(t('documents.not_applicable_hint')) ?></p>
+            </form>
         </template>
     <?php endif; ?>
 <?php endforeach; ?>
@@ -576,6 +672,7 @@ $documentForm = static function (string $action, string $titleText, array $doc, 
             <label for="st-reason" class="required"><?= e(t('fields.reason')) ?></label>
             <input id="st-reason" name="reason" class="input" required maxlength="255">
         </div>
+        <p class="hint"><?= e(t('release.status_hint')) ?></p>
     </form>
 </template>
 <?php endif; ?>

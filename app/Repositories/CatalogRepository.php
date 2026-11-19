@@ -101,7 +101,7 @@ final class CatalogRepository extends Repository
     {
         return $this->db->fetchAll(
             'SELECT m.id, m.brand_id, m.category_id, m.name, m.is_active, b.name AS brand, c.name AS category,
-                    m.fuel_gauge_id, m.tank_capacity_l, g.name AS fuel_gauge,
+                    m.fuel_gauge_id, m.tank_capacity_l, m.fuel_reference, g.name AS fuel_gauge,
                     (SELECT COUNT(*) FROM equipment e WHERE e.model_id = m.id AND e.is_archived = 0) AS equipment_count
                FROM equipment_models m
                JOIN equipment_brands b ON b.id = m.brand_id
@@ -116,7 +116,7 @@ final class CatalogRepository extends Repository
     public function findModel(int $id): ?array
     {
         return $this->db->fetchOne(
-            'SELECT m.id, m.brand_id, m.category_id, m.name, m.is_active, m.fuel_gauge_id, m.tank_capacity_l, b.name AS brand
+            'SELECT m.id, m.brand_id, m.category_id, m.name, m.is_active, m.fuel_gauge_id, m.tank_capacity_l, m.fuel_reference, b.name AS brand
                FROM equipment_models m JOIN equipment_brands b ON b.id = m.brand_id WHERE m.id = :id',
             ['id' => $id]
         );

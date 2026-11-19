@@ -1,5 +1,5 @@
 <?php
-/** @var array|null $equipment  @var array $types  @var int|null $typeId */
+/** @var array|null $equipment  @var array $types  @var int|null $typeId  @var array $responsibles */
 $selectedType = (int) old('document_type_id', $typeId);
 ?>
 <div class="page-header"><h1><?= e($title) ?></h1></div>
@@ -18,7 +18,7 @@ $selectedType = (int) old('document_type_id', $typeId);
             </select>
             <?php if ($error = field_error('document_type_id')): ?><span class="error"><?= e($error) ?></span><?php endif; ?>
         </div>
-        <?= $view->partial('partials/document_fields', ['doc' => []]) ?>
+        <?= $view->partial('partials/document_fields', ['doc' => [], 'responsibles' => $responsibles]) ?>
     </div>
     <div class="form-actions">
         <a class="btn" href="<?= e(url('/documents')) ?>"><?= e(t('common.cancel')) ?></a>
