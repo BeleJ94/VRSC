@@ -101,6 +101,7 @@ final class App
         if ($permission !== null && !$user?->can($permission)) {
             throw HttpException::forbidden();
         }
+        $auth->focus($permission);
 
         FormState::load((array) $session->pullFlash('errors', []), (array) $session->pullFlash('old', []));
         $view = $this->container->get(View::class);

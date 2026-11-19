@@ -102,11 +102,4 @@ SELECT b.id, c.id, m.model
   JOIN equipment_brands b ON b.name = m.brand
   JOIN equipment_categories c ON c.code = m.cat;
 
--- Sites d'exploitation Perfect Logistics (ignorés s'ils existent déjà)
-INSERT IGNORE INTO sites (code, name, activity) VALUES
-    ('BUREAU', 'Bureau', 'office'),
-    ('CHEMAF', 'CHEMAF', 'earthmoving'),
-    ('KAMAO', 'KAMAO', 'earthmoving'),
-    ('METALKOL', 'METALKOL', 'earthmoving'),
-    ('KINGAKILA', 'KINGAKILA', 'transport'),
-    ('SICOMINES', 'SICOMINES', 'transport');
+-- Les sites sont créés par l'administrateur (ou importés) : aucun site n'est imposé par les migrations.

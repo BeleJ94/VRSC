@@ -8,7 +8,7 @@ use App\Core\Migrator;
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
-// Les identifiants viennent de .env ; DB_NAME est forcé à perfectmaint_test par phpunit.xml.
+// Les identifiants viennent de .env ; DB_NAME est forcé à vrsc_test par phpunit.xml.
 Env::load(dirname(__DIR__, 2) . '/.env');
 date_default_timezone_set('Europe/Paris');
 

@@ -41,6 +41,8 @@ $settings = [
     ['/sites', 'building-2', 'nav.sites_admin', 'sites.manage'],
     ['/users', 'users', 'nav.users', 'users.manage'],
     ['/catalog', 'tags', 'nav.catalog', 'equipment.manage'],
+    ['/references', 'library', 'nav.references', 'reference.view'],
+    ['/delegations', 'user-check', 'nav.delegations', 'delegations.manage'],
     ['/readings', 'book-open', 'nav.readings', 'readings.manage'],
     ['/settings/mail', 'mail', 'nav.mail_settings', 'settings.manage'],
     ['/activity', 'history', 'nav.activity', 'activity.view'],

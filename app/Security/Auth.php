@@ -18,6 +18,8 @@ final class Auth
 
     private ?CurrentUser $user = null;
     private bool $resolved = false;
+    /** Permission de la route en cours : le périmètre est limité aux sites où elle est détenue. */
+    private ?string $focus = null;
 
     public function __construct(
         private readonly Session $session,
@@ -49,9 +51,23 @@ final class Auth
         return $this->user() !== null;
     }
 
+    /**
+     * Limite le périmètre de la requête aux sites où l'utilisateur détient $permission
+     * (un magasinier du site A, simple lecteur du site B, n'écrit que sur A).
+     */
+    public function focus(?string $permission): void
+    {
+        $this->focus = $permission;
+    }
+
     public function scope(): SiteScope
     {
-        return $this->user()?->scope() ?? SiteScope::none();
+        $user = $this->user();
+        if ($user === null) {
+            return SiteScope::none();
+        }
+
+        return $this->focus !== null ? $user->scopeFor($this->focus) : $user->scope();
     }
 
     /**
@@ -114,6 +130,25 @@ final class Auth
             (string) $row['locale'],
             (bool) $row['all_sites'],
             $this->identities->siteIds((int) $row['id']),
+            $this->extraAssignments((int) $row['id']),
         );
+    }
+
+    /** Fonctions supplémentaires et délégations reçues (rôles inconnus ignorés). */
+    private function extraAssignments(int $userId): array
+    {
+        $assignments = [];
+        foreach ($this->identities->roleAssignments($userId) as $assignment) {
+            $role = Role::tryFrom((string) $assignment['role']);
+            if ($role !== null) {
+                $assignments[] = [
+                    'role' => $role,
+                    'site_id' => $assignment['site_id'] !== null ? (int) $assignment['site_id'] : null,
+                    'delegated_from' => $assignment['delegated_from'] !== null ? (int) $assignment['delegated_from'] : null,
+                ];
+            }
+        }
+
+        return $assignments;
     }
 }

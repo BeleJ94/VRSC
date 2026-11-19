@@ -67,7 +67,7 @@ test('classeur Excel : en-tête stylé, filtre automatique, largeurs bornées', 
   class Sheet {
     constructor() { this.rows = []; this.columnsList = []; }
     addRow(values) {
-      const row = { values, font: null, fill: null, alignment: null };
+      const row = { values, font: null, fill: null, alignment: null, cells: {}, getCell(n) { return (this.cells[n] = this.cells[n] || {}); } };
       this.rows.push(row);
       values.forEach((_, i) => { this.columnsList[i] = this.columnsList[i] || { width: undefined }; });
       return row;

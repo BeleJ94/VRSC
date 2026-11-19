@@ -91,6 +91,22 @@ public/assets/   css/app.css, js/ (pm-core, pm-tables, pm-export : modules purs 
 | Journal d'activité | `/activity` (responsables, dans leur périmètre) | qui a fait quoi : synthèse par utilisateur, filtres utilisateur / action / élément / période, détail d'une entrée (IP, appareil, avant / après), échecs de connexion |
 | Rapports direction | `/reports` | disponibilité, pannes, immobilisation, MTTR, consommations, causes, conducteurs (responsables et consultation) |
 
+### Socle VRSC (lot 1 de la refonte)
+
+Adaptation au cahier des charges VRSC (§ 2 et § 9). Base de travail : `vrsc` ; base de test : `vrsc_test`.
+
+| Brique | Où | Règles clés |
+|---|---|---|
+| Référentiels communs | `/references` (`ReferenceCatalog`) | projets / chantiers et magasins rattachés à un site (périmètre), départements, centres de coûts, fournisseurs, transporteurs, modes de paiement ; code unique en majuscules ; un seul écran générique |
+| Import contrôlé | `/references/{type}/import` | fichier Excel / CSV lu dans le navigateur, contrôle ligne à ligne, doublons écartés, journal `import_logs` |
+| Fonctions par site | fiche utilisateur, table `user_roles` | profil principal + fonctions supplémentaires par site (demandeur, responsable hiérarchique, Direction Logistique, magasinier, acheteur, caissier, finance) ; chaque requête est limitée aux sites où la permission de la route est détenue |
+| Délégations | `/delegations` | on ne délègue que ce que l'on détient, période et motif obligatoires, révocation sans suppression |
+| Circuit d'approbation | `ApprovalService` | étapes par rôle (avis consultatif, contrôle, autorisation), seuils de montant, demandeur ≠ valideur, une personne = une étape, dérogation motivée et tracée, actes par délégation tracés |
+| Numérotation | `NumberingService` | `TYPE-AAAA-00001`, compteur verrouillé par type et par année |
+| Pièces jointes | `AttachmentService`, `/attachments/{id}` | PDF / image, 10 Mo, versionnées, empreinte SHA-256, servies après contrôle du périmètre |
+
+Lots suivants : stocks multisites, EDB / achats, transferts d'engins (OTV), finance / caisse, carburant et coûts par équipement.
+
 ### Cycle de vie d'un OT et état de l'engin
 
 | Événement | État de l'engin |

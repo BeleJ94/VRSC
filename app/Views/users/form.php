@@ -8,6 +8,9 @@ $f = static fn (string $name, string $type = 'text', array $extra = []) => $view
 $selectedSites = array_map('intval', (array) old('site_ids', $item['site_ids'] ?? []));
 $active = (bool) old('is_active', $item['is_active'] ?? true);
 $allSites = (bool) old('all_sites', $item['all_sites'] ?? false);
+// Fonctions supplémentaires par site : lignes existantes + 3 lignes vides
+$extraRoles = array_values(array_filter((array) old('extra_roles', $item['extra_roles'] ?? []), static fn ($r) => is_array($r) && ($r['role'] ?? '') !== ''));
+$extraRoles = array_merge($extraRoles, array_fill(0, 3, ['role' => '', 'site_id' => null]));
 ?>
 <div class="page-header">
     <h1><?= e($title) ?></h1>
@@ -38,6 +41,27 @@ $allSites = (bool) old('all_sites', $item['all_sites'] ?? false);
                 <?php endforeach; ?>
             </div>
             <?php if (field_error('site_ids')): ?><span class="error"><?= e(field_error('site_ids')) ?></span><?php endif; ?>
+        </div>
+        <div class="field span-2">
+            <span class="label"><?= e(t('users.extra_roles')) ?></span>
+            <span class="hint"><?= e(t('users.extra_roles_hint')) ?></span>
+            <?php foreach ($extraRoles as $i => $extra): ?>
+                <div class="filters" data-extra-role>
+                    <select name="extra_roles[<?= e($i) ?>][role]" class="input" aria-label="<?= e(t('fields.role')) ?>">
+                        <option value="">—</option>
+                        <?php foreach ($roleOptions as $value => $label): ?>
+                            <?php if ($value !== 'admin'): ?><option value="<?= e($value) ?>"<?= ($extra['role'] ?? '') === $value ? ' selected' : '' ?>><?= e($label) ?></option><?php endif; ?>
+                        <?php endforeach; ?>
+                    </select>
+                    <select name="extra_roles[<?= e($i) ?>][site_id]" class="input" aria-label="<?= e(t('fields.site_id')) ?>">
+                        <option value=""><?= e(t('common.all_sites')) ?></option>
+                        <?php foreach ($sites as $site): ?>
+                            <option value="<?= e($site['id']) ?>"<?= (int) ($extra['site_id'] ?? 0) === (int) $site['id'] ? ' selected' : '' ?>><?= e($site['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            <?php endforeach; ?>
+            <?php if (field_error('extra_roles')): ?><span class="error"><?= e(field_error('extra_roles')) ?></span><?php endif; ?>
         </div>
         <div class="field">
             <input type="hidden" name="is_active" value="0">

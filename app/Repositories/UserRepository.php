@@ -65,6 +65,7 @@ final class UserRepository extends Repository
         );
         if ($user !== null) {
             $user['site_ids'] = $this->siteIds($id);
+            $user['extra_roles'] = $this->roles($id);
         }
 
         return $user;
@@ -125,6 +126,67 @@ final class UserRepository extends Repository
                 ['user' => $userId, 'site' => $siteId]
             );
         }
+    }
+
+    /** @return list<array{role: string, site_id: int|null}> fonctions supplémentaires de l'utilisateur */
+    public function roles(int $userId): array
+    {
+        return array_map(
+            static fn (array $r): array => ['role' => (string) $r['role'], 'site_id' => $r['site_id'] !== null ? (int) $r['site_id'] : null],
+            $this->db->fetchAll('SELECT role, site_id FROM user_roles WHERE user_id = :id ORDER BY role, site_id', ['id' => $userId])
+        );
+    }
+
+    /** @param list<array{role: string, site_id: int|null}> $roles */
+    public function syncRoles(int $userId, array $roles, ?int $grantedBy): void
+    {
+        $this->db->execute('DELETE FROM user_roles WHERE user_id = :id', ['id' => $userId]);
+        foreach ($roles as $role) {
+            if ($role['site_id'] !== null) {
+                $this->scope->assertAllows($role['site_id']);
+            } elseif (!$this->scope->isAll()) {
+                throw \App\Core\HttpException::forbidden();
+            }
+            $this->db->execute(
+                'INSERT INTO user_roles (user_id, role, site_id, granted_by) VALUES (:user, :role, :site, :by)',
+                ['user' => $userId, 'role' => $role['role'], 'site' => $role['site_id'], 'by' => $grantedBy]
+            );
+        }
+    }
+
+    /**
+     * Utilisateurs actifs exerçant $role sur $siteId (profil principal ou fonction supplémentaire).
+     * Sert aux contrôles de délégation et aux listes d'approbateurs.
+     */
+    public function holdsRole(int $userId, string $role, ?int $siteId): bool
+    {
+        $row = $this->db->fetchOne('SELECT role, all_sites, is_active FROM users WHERE id = :id', ['id' => $userId]);
+        if ($row === null || (int) $row['is_active'] !== 1) {
+            return false;
+        }
+        if ($row['role'] === $role) {
+            if ($role === 'admin' || (int) $row['all_sites'] === 1) {
+                return true;
+            }
+            if ($siteId !== null && in_array($siteId, $this->siteIds($userId), true)) {
+                return true;
+            }
+        }
+        foreach ($this->roles($userId) as $extra) {
+            if ($extra['role'] === $role && ($extra['site_id'] === null || ($siteId !== null && $extra['site_id'] === $siteId))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Liste simple des comptes actifs (listes déroulantes d'administration). */
+    public function listActive(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT u.id, CONCAT(u.first_name, ' ', u.last_name) AS name, u.email, u.role FROM users u WHERE u.is_active = 1 ORDER BY u.last_name, u.first_name"
+        );
     }
 
     /** Intervenants possibles (techniciens, responsables) ayant accès au site. */

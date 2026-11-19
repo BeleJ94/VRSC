@@ -35,6 +35,23 @@ final class IdentityRepository
         );
     }
 
+    /**
+     * Fonctions supplémentaires (user_roles) et délégations en cours de validité reçues d'un délégant actif.
+     *
+     * @return list<array{role: string, site_id: int|null, delegated_from: int|null}>
+     */
+    public function roleAssignments(int $userId): array
+    {
+        return $this->db->fetchAll(
+            'SELECT ur.role, ur.site_id, NULL AS delegated_from FROM user_roles ur WHERE ur.user_id = :u1
+             UNION ALL
+             SELECT d.role, d.site_id, d.from_user_id AS delegated_from
+               FROM delegations d JOIN users f ON f.id = d.from_user_id AND f.is_active = 1
+              WHERE d.to_user_id = :u2 AND d.revoked_at IS NULL AND CURDATE() BETWEEN d.starts_on AND d.ends_on',
+            ['u1' => $userId, 'u2' => $userId]
+        );
+    }
+
     public function recordSuccess(int $id): void
     {
         $this->db->execute(

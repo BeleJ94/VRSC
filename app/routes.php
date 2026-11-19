@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Controllers\ActivityController;
+use App\Controllers\AttachmentController;
+use App\Controllers\DelegationController;
+use App\Controllers\ReferenceController;
 use App\Controllers\AuthController;
 use App\Controllers\CatalogController;
 use App\Controllers\DashboardController;
@@ -174,6 +177,25 @@ return static function (Router $r): void {
     $r->post('/catalog/models/{id}/fuel', [CatalogController::class, 'modelFuel'], ['permission' => 'equipment.manage']);
     $r->post('/catalog/gauges', [CatalogController::class, 'storeGauge'], ['permission' => 'equipment.manage']);
     $r->post('/catalog/gauges/{id}', [CatalogController::class, 'updateGauge'], ['permission' => 'equipment.manage']);
+
+    // Référentiels communs : projets, magasins, départements, centres de coûts, fournisseurs, transporteurs, modes de paiement
+    $r->get('/references', [ReferenceController::class, 'home'], ['permission' => 'reference.view']);
+    $r->get('/references/{type}', [ReferenceController::class, 'index'], ['permission' => 'reference.view']);
+    $r->get('/references/{type}/create', [ReferenceController::class, 'create'], ['permission' => 'reference.manage']);
+    $r->get('/references/{type}/import', [ReferenceController::class, 'importForm'], ['permission' => 'reference.manage']);
+    $r->post('/references/{type}/import/preview', [ReferenceController::class, 'importPreview'], ['permission' => 'reference.manage']);
+    $r->post('/references/{type}/import', [ReferenceController::class, 'importRun'], ['permission' => 'reference.manage']);
+    $r->post('/references/{type}', [ReferenceController::class, 'store'], ['permission' => 'reference.manage']);
+    $r->get('/references/{type}/{id}/edit', [ReferenceController::class, 'edit'], ['permission' => 'reference.manage']);
+    $r->post('/references/{type}/{id}', [ReferenceController::class, 'update'], ['permission' => 'reference.manage']);
+
+    // Délégations de fonction
+    $r->get('/delegations', [DelegationController::class, 'index'], ['permission' => 'delegations.manage']);
+    $r->post('/delegations', [DelegationController::class, 'store'], ['permission' => 'delegations.manage']);
+    $r->post('/delegations/{id}/revoke', [DelegationController::class, 'revoke'], ['permission' => 'delegations.manage']);
+
+    // Pièces jointes (contrôle du périmètre dans le service)
+    $r->get('/attachments/{id}', [AttachmentController::class, 'show'], ['permission' => 'attachments.view']);
 
     // Administration
     $r->get('/sites', [SiteController::class, 'index'], ['permission' => 'sites.manage']);

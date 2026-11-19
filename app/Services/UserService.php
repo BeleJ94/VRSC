@@ -34,6 +34,7 @@ final class UserService
             'all_sites' => 'bool',
             'is_active' => 'bool',
             'site_ids' => 'array',
+            'extra_roles' => 'array',
             'password' => ($passwordRequired ? 'required|' : '') . 'string|min:' . self::MIN_PASSWORD . '|max:200',
         ];
     }
@@ -45,6 +46,7 @@ final class UserService
         return $this->db->transaction(function () use ($data): int {
             $id = $this->users->create($data, password_hash((string) $data['password'], PASSWORD_DEFAULT));
             $this->users->syncSites($id, $data['site_ids']);
+            $this->users->syncRoles($id, $data['extra_roles'], $this->auth->user()?->id);
             unset($data['password']);
             $this->logger->log('create', 'user', $id, null, null, $data, $data['email']);
 
@@ -63,6 +65,7 @@ final class UserService
             $before = $this->users->find($id) ?? throw HttpException::notFound();
             $this->users->update($id, $data);
             $this->users->syncSites($id, $data['site_ids']);
+            $this->users->syncRoles($id, $data['extra_roles'], $this->auth->user()?->id);
             if ($data['password'] !== null) {
                 $this->users->updatePassword($id, password_hash($data['password'], PASSWORD_DEFAULT));
             }
@@ -71,6 +74,30 @@ final class UserService
             unset($before['last_login_at']);
             $this->logger->log('update', 'user', $id, null, $before + ['password' => null], $after, $data['email']);
         });
+    }
+
+    /**
+     * Fonctions supplémentaires saisies : lignes [role, site_id] (site vide = tous les sites), sans doublon.
+     *
+     * @return list<array{role: string, site_id: int|null}>
+     */
+    private static function normalizeRoles(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            $role = is_array($row) ? (string) ($row['role'] ?? '') : '';
+            if ($role === '') {
+                continue;
+            }
+            if (Role::tryFrom($role) === null || $role === Role::Admin->value) {
+                throw Validator::fail('extra_roles', 'in');
+            }
+            $site = $row['site_id'] ?? null;
+            $siteId = is_numeric($site) && (int) $site > 0 ? (int) $site : null;
+            $out[$role . ':' . ($siteId ?? 'all')] = ['role' => $role, 'site_id' => $siteId];
+        }
+
+        return array_values($out);
     }
 
     private function prepare(array $input, ?int $id): array
@@ -84,6 +111,7 @@ final class UserService
         if ($data['role'] !== Role::Admin->value && !$data['all_sites'] && $data['site_ids'] === []) {
             throw Validator::fail('site_ids', 'required');
         }
+        $data['extra_roles'] = self::normalizeRoles($data['extra_roles']);
 
         return $data;
     }

@@ -15,11 +15,35 @@ enum Role: string
     case Viewer = 'viewer';
     /** Agent de saisie : n'accède qu'à la feuille de saisie des index de ses sites. */
     case Encoder = 'encoder';
+    // Fonctions VRSC (séparation demandeur / approbateur / réceptionnaire / payeur), attribuables par site.
+    /** Demandeur : émet les états de besoins et les demandes de transfert. */
+    case Requester = 'requester';
+    /** Responsable hiérarchique : donne l'avis hiérarchique (acte distinct de l'autorisation). */
+    case Supervisor = 'supervisor';
+    /** Direction Logistique : autorise (ordres de transfert, sorties intersites, achats). */
+    case Logistics = 'logistics';
+    /** Magasinier : tient la fiche du magasin de son site, réceptionne. */
+    case Storekeeper = 'storekeeper';
+    /** Acheteur : devis, commandes. */
+    case Buyer = 'buyer';
+    /** Caissier : exécute les décaissements autorisés. */
+    case Cashier = 'cashier';
+    /** Finance : contrôle des pièces, engagements, rapprochements. */
+    case Finance = 'finance';
+
+    private const VRSC = ['requester', 'supervisor', 'logistics', 'storekeeper', 'buyer', 'cashier', 'finance'];
 
     private const PERMISSIONS = [
         'meters.entry' => ['admin', 'manager', 'technician', 'encoder'],
         'readings.manage' => ['admin'],
-        'dashboard.view' => ['admin', 'manager', 'technician', 'viewer'],
+        'dashboard.view' => ['admin', 'manager', 'technician', 'viewer', ...self::VRSC],
+        // Référentiels communs, délégations et circuit d'approbation
+        'reference.view' => ['admin', 'manager', 'viewer', ...self::VRSC],
+        'reference.manage' => ['admin', 'logistics'],
+        'delegations.manage' => ['admin', 'logistics'],
+        'approvals.use' => ['admin', 'manager', 'technician', ...self::VRSC],
+        'approvals.override' => ['admin', 'logistics'],
+        'attachments.view' => ['admin', 'manager', 'technician', 'viewer', ...self::VRSC],
         'equipment.view' => ['admin', 'manager', 'technician', 'viewer'],
         'equipment.manage' => ['admin', 'manager'],
         'equipment.status' => ['admin', 'manager', 'technician'],
