@@ -41,9 +41,10 @@ $sections = [
         ['/work-orders', 'clipboard-list', 'nav.work_orders', 'workorder.view', 'badge' => 'overdue'],
         ['/preventive', 'calendar-clock', 'nav.preventive', 'preventive.view', 'badge' => 'preventive'],
         ['/planning', 'calendar-range', 'nav.planning', 'workorder.view'],
-        ['/meters', 'gauge', 'nav.meters', 'equipment.view', 'badge' => 'meter_soon meter_stale'],
-        ['/saisie', 'pencil', 'nav.meter_entry', 'meters.entry', 'sub' => true],
-        ['/meters/screen', 'monitor', 'nav.meters_screen', 'equipment.view', 'sub' => true, 'blank' => true],
+        // Un seul lien : supervision, saisie, répertoire et écran mural sont des onglets de la page.
+        ['/meters', 'gauge', 'nav.meters', 'equipment.view', 'badge' => 'meter_soon meter_stale', 'also' => ['/readings']],
+        // L'encodeur, qui ne voit pas la supervision, garde son accès direct à la saisie.
+        ['/saisie', 'pencil', 'nav.meter_entry', 'meters.entry', 'unless' => 'equipment.view'],
     ]],
     'finance' => ['nav.section_finance', [
         ['/finance', 'landmark', 'nav.finance', 'finance.view'],
@@ -56,6 +57,7 @@ $sections = [
         ['/edb/reports', 'bar-chart-3', 'nav.edb_reports', 'edb.view'],
         ['/costs', 'calculator', 'nav.costs', 'costs.view'],
         ['/finance/reports', 'pie-chart', 'nav.finance_reports', 'finance.view'],
+        ['/closings', 'lock', 'nav.closings', 'closings.view'],
         ['/alerts', 'siren', 'nav.alerts', 'costs.view', 'badge' => 'wear overuse'],
     ]],
 ];
@@ -77,7 +79,6 @@ $settings = [
     ['/references', 'library', 'nav.references', 'reference.view'],
     ['/catalog', 'tags', 'nav.catalog', 'equipment.manage'],
     ['/delegations', 'user-check', 'nav.delegations', 'delegations.manage'],
-    ['/readings', 'book-open', 'nav.readings', 'readings.manage'],
     ['/settings/mail', 'mail', 'nav.mail_settings', 'settings.manage'],
     ['/activity', 'history', 'nav.activity', 'activity.view'],
     ['/backups', 'database-backup', 'nav.backups', 'backups.manage'],
@@ -94,8 +95,12 @@ $quick = array_values(array_filter([
 ], static fn (array $l) => $currentUser->can($l[3])));
 // Un seul lien allumé : celui dont le chemin est le plus précis (« /stock/transfers » plutôt que « /stock »).
 $navPaths = [];
+$aliases = [];
 foreach ($sections as [, $sectionLinks]) {
-    foreach ($sectionLinks as $l) { $navPaths[] = $l[0]; }
+    foreach ($sectionLinks as $l) {
+        $navPaths[] = $l[0];
+        foreach ($l['also'] ?? [] as $alias) { $navPaths[] = $alias; $aliases[$alias] = $l[0]; }
+    }
 }
 foreach ($settings as $l) { $navPaths[] = $l[0]; }
 $activePath = '';
@@ -104,6 +109,7 @@ foreach ($navPaths as $path) {
         $activePath = $path;
     }
 }
+$activePath = $aliases[$activePath] ?? $activePath;
 if (preg_match('#^/sites/\d+$#', $currentPath)) {
     $activePath = $contextSite ? '/sites/' . $contextSite['id'] : '';
 }
@@ -165,7 +171,7 @@ $navLink = static function (array $l) use ($activePath, $navCounts): string {
 
         <ul class="nav">
             <?php foreach ($order as $key): ?>
-                <?php [$sectionLabel, $links] = $sections[$key]; $links = array_filter($links, static fn (array $l) => $currentUser->can($l[3])); ?>
+                <?php [$sectionLabel, $links] = $sections[$key]; $links = array_filter($links, static fn (array $l) => $currentUser->can($l[3]) && !(isset($l['unless']) && $currentUser->can($l['unless']))); ?>
                 <?php if ($links !== []): ?>
                     <li class="nav__section"><span class="nav__text"><?= e(t($sectionLabel)) ?></span></li>
                     <?php foreach ($links as $link): ?><?= $navLink($link) ?><?php endforeach; ?>

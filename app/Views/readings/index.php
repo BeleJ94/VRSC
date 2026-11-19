@@ -8,6 +8,7 @@ $view->share('pageScripts', ['js/readings.js']);
         <?= $view->partial('partials/export_buttons', ['table' => 'readings', 'exportTitle' => t('nav.readings')]) ?>
     </div>
 </div>
+<?= $view->partial('meters/_tabs', ['tab' => 'readings']) ?>
 <p class="hint"><?= e(t('readings.intro')) ?></p>
 <section class="card">
     <form class="filters" data-filters-for="readings">

@@ -88,6 +88,9 @@ final class StockController extends Controller
     public function closePeriod(Request $request): Response
     {
         $this->periods->close($request->body);
+        if ($request->string('return') === 'closings') {
+            return $this->redirect('/closings?period=' . rawurlencode((string) $request->string('period')), t('flash.period_closed'));
+        }
 
         return $this->redirect('/stock/periods', t('flash.period_closed'));
     }

@@ -151,6 +151,9 @@ final class EquipmentCostController extends Controller
     public function close(Request $request): Response
     {
         $this->service->close($request->body);
+        if ($request->string('return') === 'closings') {
+            return $this->redirect('/closings?period=' . rawurlencode((string) $request->string('period')), t('flash.cost_closed'));
+        }
 
         return $this->redirect('/costs?site_id=' . (int) $request->int('site_id') . '&period=' . rawurlencode((string) $request->string('period')), t('flash.cost_closed'));
     }

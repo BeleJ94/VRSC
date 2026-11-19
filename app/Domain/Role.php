@@ -66,6 +66,8 @@ enum Role: string
         'stock.transfer' => ['admin', 'manager', 'storekeeper', 'requester', 'supervisor', 'logistics'],
         'stock.inventory' => ['admin', 'manager', 'storekeeper'],
         'stock.close' => ['admin', 'logistics', 'finance'],
+        // Page « Clôtures du mois » : ceux qui clôturent le stock, les coûts ou la caisse.
+        'closings.view' => ['admin', 'logistics', 'finance', 'cashier'],
         // États de besoins (EDB) et achats : émission, service depuis le stock, devis et commandes
         'edb.view' => ['admin', 'manager', 'technician', 'viewer', ...self::VRSC],
         'edb.create' => ['admin', 'manager', 'technician', 'requester', 'supervisor', 'storekeeper'],

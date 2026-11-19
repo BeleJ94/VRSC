@@ -150,6 +150,7 @@ return static function (Router $r): void {
     $r->get('/stock/journal/data', [StockController::class, 'journalData'], ['permission' => 'stock.view']);
     $r->get('/stock/periods', [StockController::class, 'periods'], ['permission' => 'stock.view']);
     $r->post('/stock/periods', [StockController::class, 'closePeriod'], ['permission' => 'stock.close']);
+    $r->get('/closings', [\App\Controllers\ClosingController::class, 'index'], ['permission' => 'closings.view']);
     $r->get('/stock/transfers', [StockTransferController::class, 'index'], ['permission' => 'stock.view']);
     $r->get('/stock/transfers/create', [StockTransferController::class, 'create'], ['permission' => 'stock.transfer']);
     $r->post('/stock/transfers', [StockTransferController::class, 'store'], ['permission' => 'stock.transfer']);

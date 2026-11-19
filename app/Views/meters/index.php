@@ -13,10 +13,8 @@ $s = $overview['summary'];
             </div>
         </div>
     </div>
-    <div class="page-header__actions">
-        <a class="btn" href="<?= e(url('/meters/screen', ['site_id' => $siteId ?? ''])) ?>" target="_blank" rel="noopener"><i data-lucide="monitor"></i><?= e(t('meters.screen')) ?></a>
-    </div>
 </div>
+<?= $view->partial('meters/_tabs', ['tab' => 'meters', 'siteId' => $siteId]) ?>
 
 <?php if (count($sites) > 1): ?>
 <nav class="chips" aria-label="<?= e(t('fields.site_id')) ?>">

@@ -1643,3 +1643,13 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
   body.sidebar-mini .sidebar__new { margin: 0 var(--space-2) var(--space-2); }
   body.sidebar-mini .sidebar__new .menu__list { right: auto; min-width: 230px; }
 }
+
+/* Onglets de page (compteurs) et page des clôtures */
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--border); margin: 0 0 var(--space-4); }
+.tabs__item { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; color: var(--text-muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: .875rem; }
+.tabs__item:hover { color: var(--text); }
+.tabs__item[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.tabs__item [data-lucide] { width: 16px; height: 16px; }
+.tabs__ext { width: 12px !important; height: 12px !important; opacity: .6; }
+.closing-form { margin-top: var(--space-2); }
+.closing-register + .closing-register { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px dashed var(--border); }
