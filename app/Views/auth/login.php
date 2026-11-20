@@ -3,10 +3,24 @@
     <aside class="login__hero" aria-hidden="true">
         <div class="login__brand"><img class="login__logo-img" src="<?= e(asset('img/logo-vrsc-white.svg')) ?>" alt="VRSC" width="220" height="68"><span class="login__product">ETHAN VRSC</span></div>
         <div class="login__pitch">
+            <span class="login__eyebrow"><?= e(t('auth.hero_eyebrow')) ?></span>
             <h2><?= e(t('auth.hero_title')) ?></h2>
             <p><?= e(t('auth.hero_text')) ?></p>
+            <ul class="login__modules">
+                <?php foreach ([
+                    ['file-pen-line', 'auth.module_purchasing'], ['warehouse', 'auth.module_stock'], ['truck', 'auth.module_fleet'],
+                    ['clipboard-list', 'auth.module_maintenance'], ['banknote', 'auth.module_finance'], ['calculator', 'auth.module_costs'],
+                ] as [$icon, $label]): ?>
+                    <li><i data-lucide="<?= e($icon) ?>"></i><span><?= e(t($label)) ?></span></li>
+                <?php endforeach; ?>
+            </ul>
         </div>
-        <div class="login__footnote">© <?= date('Y') ?> VRSC SARL</div>
+        <ul class="login__trust">
+            <li><i data-lucide="stamp"></i><?= e(t('auth.trust_approvals')) ?></li>
+            <li><i data-lucide="map-pin"></i><?= e(t('auth.trust_sites')) ?></li>
+            <li><i data-lucide="database-backup"></i><?= e(t('auth.trust_backup')) ?></li>
+        </ul>
+        <div class="login__footnote">© <?= date('Y') ?> VRSC SARL · ETHAN VRSC</div>
     </aside>
 
     <section class="login__panel">
@@ -47,6 +61,7 @@
                     <?= e(t('auth.submit')) ?> <i data-lucide="arrow-right"></i>
                 </button>
             </form>
+            <p class="login__help muted"><i data-lucide="life-buoy"></i><?= e(t('auth.help')) ?></p>
             <p class="login__secure muted"><i data-lucide="shield-check"></i><?= e(t('auth.secure_note')) ?></p>
         </div>
     </section>
