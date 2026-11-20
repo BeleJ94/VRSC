@@ -81,6 +81,13 @@ final class PreventiveController extends Controller
         return $this->redirect('/preventive', t('flash.plan_deleted'));
     }
 
+    public function workOrderNow(Request $request, array $params): Response
+    {
+        $woId = $this->service->createWorkOrderNow($this->id($params));
+
+        return $this->redirect('/work-orders/' . $woId, t('preventive.wo_created_now'));
+    }
+
     public function generate(Request $request): Response
     {
         $created = $this->service->generateDue();
@@ -99,6 +106,7 @@ final class PreventiveController extends Controller
             'item' => $plan,
             'id' => $id,
             'equipment' => $equipment,
+            'openWo' => $id !== null ? $this->plans->openWorkOrder($id) : null,
         ]);
     }
 }

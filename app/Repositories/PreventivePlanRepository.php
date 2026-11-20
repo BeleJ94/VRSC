@@ -83,6 +83,17 @@ final class PreventivePlanRepository extends Repository
         );
     }
 
+    /** OT encore ouvert (ouvert, en cours, en attente de pièce) généré par ce plan. */
+    public function openWorkOrder(int $planId): ?array
+    {
+        return $this->db->fetchOne(
+            "SELECT id, reference, status FROM work_orders
+              WHERE preventive_plan_id = :p AND status IN ('open', 'in_progress', 'waiting_part')
+              ORDER BY id DESC LIMIT 1",
+            ['p' => $planId]
+        );
+    }
+
     public function findForUpdate(int $id): ?array
     {
         [$scopeSql, $params] = $this->scope->clause('p.site_id');

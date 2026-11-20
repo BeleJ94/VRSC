@@ -130,6 +130,23 @@ final class PreventiveService
      *
      * @return list<int> identifiants des OT créés
      */
+    /**
+     * OT d'un plan créé tout de suite, sans attendre l'échéance (entretien avancé, engin déjà à l'atelier) :
+     * à faire dès aujourd'hui, avec les consignes et opérations du plan. Refusé si le plan a déjà un OT ouvert.
+     */
+    public function createWorkOrderNow(int $planId): int
+    {
+        $plan = $this->plans->find($planId) ?? throw \App\Core\HttpException::notFound();
+        if (!(int) $plan['is_active']) {
+            throw Validator::fail('plan', 'plan_inactive');
+        }
+        if (($open = $this->plans->openWorkOrder($planId)) !== null) {
+            throw Validator::fail('plan', 'plan_has_open_wo', ['reference' => $open['reference']]);
+        }
+
+        return $this->workOrders->createFromPlan(['next_due_date' => date('Y-m-d')] + $plan);
+    }
+
     public function generateDue(int $horizonDays = self::DEFAULT_HORIZON_DAYS): array
     {
         $created = [];

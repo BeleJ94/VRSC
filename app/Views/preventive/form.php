@@ -3,7 +3,7 @@
  * Plan préventif, organisé selon les règles du suivi des index :
  * périodicité dans le compteur de suivi de l'engin (heures ou km, l'autre compteur en option),
  * point de départ obligatoire (date + index de la dernière réalisation) et aperçu de l'avancement.
- * @var array $item  @var int|null $id  @var array|null $equipment
+ * @var array $item  @var int|null $id  @var array|null $equipment  @var array|null $openWo
  */
 $view->share('pageScripts', ['js/preventive-form.js']);
 // Création depuis un engin : point de départ proposé = index actuel et date du jour, visibles et modifiables.
@@ -30,7 +30,22 @@ $equipmentJson = $equipment ? [
     'meter_basis' => $basis,
 ] : null;
 ?>
-<div class="page-header"><h1><?= e($title) ?></h1></div>
+<div class="page-header">
+    <h1><?= e($title) ?></h1>
+    <?php if ($id): ?>
+        <div class="page-header__actions">
+            <?php if ($openWo): ?>
+                <a class="btn" href="<?= e(url('/work-orders/' . $openWo['id'])) ?>"><i data-lucide="clipboard-list"></i><?= e(t('preventive.open_wo', ['reference' => $openWo['reference']])) ?></a>
+            <?php elseif ((int) ($item['is_active'] ?? 0)): ?>
+                <form method="post" action="<?= e(url("/preventive/$id/work-order")) ?>" data-confirm="<?= e(t('preventive.wo_now_confirm', ['title' => $item['title'] ?? ''])) ?>">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn--primary"><i data-lucide="clipboard-plus"></i><?= e(t('preventive.wo_now')) ?></button>
+                </form>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+</div>
+<?php if (field_error('plan')): ?><div class="alert alert--error"><?= e(field_error('plan')) ?></div><?php endif; ?>
 
 <?php if ($unconfirmed): ?>
     <div class="alert alert--warning"><i data-lucide="alert-triangle"></i><span><?= e(t('preventive.unconfirmed_notice')) ?></span></div>

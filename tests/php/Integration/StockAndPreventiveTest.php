@@ -148,6 +148,32 @@ final class StockAndPreventiveTest extends DatabaseTestCase
         self::assertStringContainsString('Tous les engins actifs de votre périmètre ont un plan préventif actif.', $this->http($session, 'GET', '/preventive')->body);
     }
 
+    public function testWorkOrderCanBeCreatedNowFromAPlanOnlyOnce(): void
+    {
+        $equipment = $this->createEquipment($this->site, 'CH-NOW', 'available', 100);
+        $preventive = $this->service($this->manager, PreventiveService::class);
+        $planId = $preventive->create([
+            'equipment_id' => (string) $equipment, 'title' => 'Entretien 250 h', 'interval_hours' => '250', 'last_done_hours' => '100',
+            'last_done_at' => date('Y-m-d'), 'is_active' => '1', 'checklist' => "Vidange\nGraissage",
+        ]);
+        self::assertSame([], $preventive->generateDue(), 'Pas encore à échéance');
+
+        $session = \App\Core\Session::memory(['auth_user_id' => $this->manager, '_csrf_token' => str_repeat('a', 64)]);
+        self::assertStringContainsString("/preventive/$planId/work-order\"", $this->http($session, 'GET', "/preventive/$planId/edit")->body);
+        $res = $this->http($session, 'POST', "/preventive/$planId/work-order", ['_csrf' => str_repeat('a', 64)]);
+        self::assertSame(302, $res->status);
+        $wo = $this->row('SELECT * FROM work_orders WHERE preventive_plan_id = :p', ['p' => $planId]);
+        self::assertStringContainsString('/work-orders/' . $wo['id'], $res->headers['Location']);
+        self::assertSame(['preventive', date('Y-m-d')], [$wo['type'], $wo['due_date']], 'À faire dès aujourd\'hui');
+        self::assertSame(2, (int) $this->value('SELECT COUNT(*) FROM work_order_checks WHERE work_order_id = :w', ['w' => $wo['id']]));
+
+        $page = $this->http($session, 'GET', "/preventive/$planId/edit")->body;
+        self::assertStringContainsString('OT en cours : ' . $wo['reference'], $page);
+        self::assertStringNotContainsString("/preventive/$planId/work-order\"", $page);
+        $this->expectException(ValidationException::class);
+        $preventive->createWorkOrderNow($planId);
+    }
+
     public function testPlanUpdateLogsOnlyChangedFields(): void
     {
         $equipment = $this->createEquipment($this->site, 'CH-04');
