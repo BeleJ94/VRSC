@@ -80,6 +80,7 @@ $settings = [
     ['/catalog', 'tags', 'nav.catalog', 'equipment.manage'],
     ['/delegations', 'user-check', 'nav.delegations', 'delegations.manage'],
     ['/settings/mail', 'mail', 'nav.mail_settings', 'settings.manage'],
+    ['/settings/tasks', 'clock', 'nav.scheduled_tasks', 'settings.manage'],
     ['/activity', 'history', 'nav.activity', 'activity.view'],
     ['/backups', 'database-backup', 'nav.backups', 'backups.manage'],
 ];

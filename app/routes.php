@@ -327,6 +327,8 @@ return static function (Router $r): void {
 
     // Paramètres : envoi d'e-mails et alarmes par e-mail
     $r->get('/settings/mail', [SettingsController::class, 'mail'], ['permission' => 'settings.manage']);
+    $r->get('/settings/tasks', [\App\Controllers\ScheduledTaskController::class, 'index'], ['permission' => 'settings.manage']);
+    $r->post('/settings/tasks/{task}/run', [\App\Controllers\ScheduledTaskController::class, 'run'], ['permission' => 'settings.manage']);
     $r->post('/settings/mail', [SettingsController::class, 'saveMail'], ['permission' => 'settings.manage']);
     $r->post('/settings/mail/test', [SettingsController::class, 'testMail'], ['permission' => 'settings.manage']);
     $r->post('/settings/mail/alerts', [SettingsController::class, 'sendAlerts'], ['permission' => 'settings.manage']);

@@ -2071,3 +2071,20 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
 .wochk__btn--ok.is-active { background: #067647; border-color: #067647; color: #fff; }
 .wochk__btn--nok.is-active { background: #B42318; border-color: #B42318; color: #fff; }
 .wochk__btn--na.is-active { background: #667085; border-color: #667085; color: #fff; }
+
+/* Tâches planifiées */
+.task-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-4); }
+.task-grid .card { margin: 0; }
+.task-card { display: flex; flex-direction: column; gap: var(--space-2); border-top: 3px solid #067647; }
+.task-card--late, .task-card--never { border-top-color: #B54708; }
+.task-card--failed { border-top-color: #B42318; }
+.task-card__head { display: flex; gap: var(--space-3); align-items: flex-start; }
+.task-card__head h2 { margin: 0; font-size: 1rem; }
+.task-card__head .badge { margin-left: auto; }
+.task-card__icon { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #EAF1F8; color: #0D5487; }
+.task-card__icon [data-lucide] { width: 18px; height: 18px; }
+.task-card__dl { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+.task-card__dl dt { color: var(--text-muted, #5B6573); }
+.task-card__dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.task-card__actions { margin-top: auto; padding-top: var(--space-2); }
+.code-block { background: #0F1B2A; color: #E6EDF5; padding: 10px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; white-space: pre; }
