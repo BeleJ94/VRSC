@@ -39,10 +39,10 @@ final class DashboardDrillTest extends DatabaseTestCase
         self::assertSame(200, $page->status);
         self::assertGreaterThanOrEqual(7, substr_count($page->body, 'data-drill="'), 'Chaque KPI ouvre un détail');
         self::assertStringContainsString('data-notifications', $page->body);
-        preg_match('#id="dashboard-data">(.*?)</script>#s', $page->body, $m);
-        $data = json_decode(html_entity_decode($m[1]), true);
-        self::assertCount(8, $data['weekly']['keys']);
-        self::assertSame((int) date('oW'), end($data['weekly']['keys']));
+        // OT par semaine : 8 barres cliquables, la dernière est la semaine en cours.
+        preg_match_all('#<button type="button" class="xweek"[^>]*data-drill="([^"]+)"#', $page->body, $m);
+        self::assertCount(8, $m[1]);
+        self::assertSame((int) date('oW'), json_decode(html_entity_decode(end($m[1])), true)['params']['week']);
     }
 
     public function testDrillFiltersWeekClosedAndContracts(): void

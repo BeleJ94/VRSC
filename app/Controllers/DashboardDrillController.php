@@ -19,7 +19,20 @@ final class DashboardDrillController extends Controller
 
     public function payments(Request $request): Response
     {
-        return $this->json($this->drill->payments($this->dt($request, ['x.date', 'DESC']), $this->filters($request, ['status', 'kind', 'category', 'date_field'])));
+        $filters = $this->filters($request, ['status', 'kind', 'category', 'date_field']);
+        // « Mes décaissements » : uniquement ceux du compte connecté.
+        $filters['requested_by'] = $request->string('mine') === '1' ? $this->user()->id : null;
+
+        return $this->json($this->drill->payments($this->dt($request, ['x.date', 'DESC']), $filters));
+    }
+
+    /** Décaissements demandés par le compte connecté (demandeurs sans accès finance). */
+    public function myPayments(Request $request): Response
+    {
+        $filters = $this->filters($request, ['status', 'kind']);
+        $filters['requested_by'] = $this->user()->id;
+
+        return $this->json($this->drill->payments($this->dt($request, ['x.date', 'DESC']), $filters));
     }
 
     public function invoices(Request $request): Response

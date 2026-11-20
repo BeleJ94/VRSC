@@ -72,21 +72,21 @@ final class DashboardViewsHttpTest extends DatabaseTestCase
         self::assertStringContainsString('Trésorerie des caisses', $this->page('finance', [], true));
         $cashier = $this->page('cashier', [$this->site], false);
         self::assertStringContainsString('Trésorerie des caisses', $cashier);
-        self::assertSame([], self::tabs($cashier), 'Une seule vue : pas d\'onglets');
+        self::assertSame(['finance', 'cash'], self::tabs($cashier));
 
         // Responsable maintenance : Maintenance par défaut, Magasin en plus (il mouvemente le stock de son site) ;
         // une vue non autorisée demandée est ignorée.
         $manager = $this->page('manager', [$this->site], false, '/?view=executive');
         self::assertStringNotContainsString('Dépenses engagées', $manager);
         self::assertStringContainsString('Disponibilité du parc', $manager);
-        self::assertSame(['stores', 'maintenance'], self::tabs($manager));
+        self::assertSame(['stores', 'maintenance', 'requests'], self::tabs($manager));
 
         // Magasinier : vue Magasin seule ; acheteur : Finance et Achats, Achats par défaut.
         $keeper = $this->page('storekeeper', [$this->site], false);
         foreach (['Valeur du stock', 'Sorties de stock', 'Cuves de gasoil', 'Réceptions attendues', 'Transferts en cours'] as $needle) {
             self::assertStringContainsString($needle, $keeper, $needle);
         }
-        self::assertSame([], self::tabs($keeper));
+        self::assertSame(['stores', 'requests'], self::tabs($keeper));
         $buyer = $this->page('buyer', [], true);
         foreach (['EDB émis', 'EDB à acheter', 'Commandes en cours', 'Délai EDB', 'Fournisseurs de la période'] as $needle) {
             self::assertStringContainsString($needle, $buyer, $needle);
@@ -143,6 +143,40 @@ final class DashboardViewsHttpTest extends DatabaseTestCase
         $this->db->execute('INSERT INTO equipment_cost_periods (site_id, period) VALUES (:s, :p)', ['s' => $this->site, 'p' => $period]);
         $html = $this->http(Session::memory(['auth_user_id' => $cashierId]), 'GET', '/')->body;
         self::assertStringNotContainsString('clôture(s) du mois en retard', $html);
+    }
+
+    public function testCashAndRequestsViews(): void
+    {
+        $requester = $this->createUser('requester', [$this->site]);
+        $other = $this->createUser('requester', [$this->site]);
+        $now = date('Y-m-d H:i:s');
+        $register = $this->db->insert("INSERT INTO cash_registers (site_id, name, balance) VALUES (:s, 'Caisse <b>K</b>', 450)", ['s' => $this->site]);
+        $this->db->execute("INSERT INTO cash_entries (register_id, entry_date, reference, direction, amount, balance_after, label) VALUES (:r, CURDATE(), 'C-1', 'out', 50, 450, 'Mission')", ['r' => $register]);
+        $this->insertLoose('payment_requests', ['reference' => 'DDP-A', 'site_id' => $this->site, 'kind' => 'expense', 'status' => 'approved', 'amount' => 80, 'approved_at' => $now, 'requested_by' => $requester, 'beneficiary' => 'Hôtel']);
+        $this->insertLoose('payment_requests', ['reference' => 'DDP-B', 'site_id' => $this->site, 'kind' => 'expense', 'status' => 'paid', 'amount' => 30, 'paid_at' => $now, 'requested_by' => $other]);
+
+        // Caissier : vue Caisse par défaut ; caisse, sorties du jour, décaissement à payer.
+        $cashier = $this->http(\App\Core\Session::memory(['auth_user_id' => $this->createUser('cashier', [$this->site])]), 'GET', '/')->body;
+        foreach (['Trésorerie des caisses', 'Sorties de caisse du jour', 'Caisse &lt;b&gt;K&lt;/b&gt;', 'DDP-A', 'Décaissements approuvés à payer'] as $needle) {
+            self::assertStringContainsString($needle, $cashier, $needle);
+        }
+        self::assertStringNotContainsString('<b>K</b>', $cashier);
+
+        // Demandeur : uniquement ses EDB et ses décaissements, avec le suivi par étapes.
+        $this->insertLoose('purchase_requests', ['reference' => 'EDB-MOI', 'site_id' => $this->site, 'status' => 'approved', 'requested_by' => $requester, 'subject' => 'Filtres', 'requested_at' => $now, 'approved_at' => $now]);
+        $this->insertLoose('purchase_requests', ['reference' => 'EDB-AUTRE', 'site_id' => $this->site, 'status' => 'pending', 'requested_by' => $other, 'subject' => 'Autre', 'requested_at' => $now]);
+        $mine = $this->http(\App\Core\Session::memory(['auth_user_id' => $requester]), 'GET', '/')->body;
+        foreach (['Suivi de mes demandes', 'EDB-MOI', 'xsteps', 'Mes décaissements', 'DDP-A'] as $needle) {
+            self::assertStringContainsString($needle, $mine, $needle);
+        }
+        self::assertStringNotContainsString('EDB-AUTRE', $mine);
+        self::assertStringNotContainsString('DDP-B', $mine);
+        self::assertSame([], self::tabs($mine), 'Le demandeur n\'a que sa vue');
+        // « Mes décaissements » : la liste de détail se limite au compte connecté.
+        $json = json_decode($this->http(\App\Core\Session::memory(['auth_user_id' => $requester]), 'GET', '/dashboard/drill/my-payments?draw=1', [], ['x-requested-with' => 'XMLHttpRequest'])->body, true);
+        self::assertSame(['DDP-A'], array_column($json['data'], 'reference'));
+        // Superviseur : Mes demandes par défaut.
+        self::assertStringContainsString('Suivi de mes demandes', $this->page('supervisor', [$this->site], false));
     }
 
     public function testPeriodBounds(): void

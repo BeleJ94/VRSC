@@ -32,7 +32,7 @@ final class DashboardController extends Controller
         $views = DashboardViewService::viewsFor($user);
         $view = in_array($request->string('view'), $views, true) ? (string) $request->string('view') : (DashboardViewService::defaultView($user, $views) ?? 'maintenance');
         $periodKey = in_array($request->string('period'), ExecutiveDashboardRepository::PERIODS, true) ? (string) $request->string('period') : 'month';
-        $periodViews = ['executive', 'finance', 'purchasing', 'stores'];
+        $periodViews = DashboardViewService::PERIOD_VIEWS;
         $period = in_array($view, $periodViews, true) ? ExecutiveDashboardRepository::period($periodKey) : null;
         $common = [
             'title' => t('nav.dashboard'),

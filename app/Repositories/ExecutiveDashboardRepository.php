@@ -442,6 +442,144 @@ final class ExecutiveDashboardRepository extends Repository
         );
     }
 
+    /** Engins hors d'usage (panne, maintenance, attente pièce, immobilisé, remise en service à valider), du plus ancien au plus récent. */
+    public function equipmentDown(?int $siteId, int $limit = 8): array
+    {
+        [$s, $p] = $this->sites('e.site_id', $siteId, 'ed');
+
+        return $this->db->fetchAll(
+            "SELECT e.id, e.code, e.name, e.status, e.status_changed_at, s.name AS site, TIMESTAMPDIFF(HOUR, e.status_changed_at, NOW()) AS hours,
+                    (SELECT w.reference FROM work_orders w WHERE w.equipment_id = e.id AND w.status IN ('open', 'in_progress', 'waiting_part') ORDER BY w.id DESC LIMIT 1) AS work_order
+               FROM equipment e JOIN sites s ON s.id = e.site_id
+              WHERE e.is_archived = 0 AND e.status IN ('breakdown', 'maintenance', 'waiting_part', 'immobilized', 'pending_release') AND $s
+              ORDER BY e.status_changed_at LIMIT " . max(1, $limit),
+            $p
+        );
+    }
+
+    /** Prochains entretiens préventifs : échus d'abord, puis par date d'échéance. */
+    public function upcomingPreventive(?int $siteId, int $limit = 6): array
+    {
+        [$s, $p] = $this->sites('pp.site_id', $siteId, 'up');
+
+        return $this->db->fetchAll(
+            "SELECT pp.id, pp.title, pp.next_due_date, pp.next_due_hours, pp.next_due_km, e.id AS equipment_id, e.code, e.hour_meter, e.odometer_km, s.name AS site,
+                    (pp.next_due_date <= CURDATE() OR (pp.next_due_hours IS NOT NULL AND e.hour_meter >= pp.next_due_hours)
+                        OR (pp.next_due_km IS NOT NULL AND e.odometer_km >= pp.next_due_km)) AS due
+               FROM preventive_plans pp JOIN equipment e ON e.id = pp.equipment_id AND e.is_archived = 0 JOIN sites s ON s.id = pp.site_id
+              WHERE pp.is_active = 1 AND $s
+              ORDER BY due DESC, pp.next_due_date IS NULL, pp.next_due_date, (pp.next_due_hours - e.hour_meter) LIMIT " . max(1, $limit),
+            $p
+        );
+    }
+
+    /** Ordres de travail terminés par mois. @return array<string, float> */
+    public function workOrdersDoneByMonth(string $from, string $to, ?int $siteId): array
+    {
+        [$s, $p] = $this->sites('w.site_id', $siteId, 'wd');
+
+        return array_map('floatval', array_column($this->db->fetchAll(
+            "SELECT DATE_FORMAT(w.completed_at, '%Y-%m') AS m, COUNT(*) AS v FROM work_orders w
+              WHERE w.status = 'done' AND w.completed_at BETWEEN :f AND :t AND $s GROUP BY m",
+            ['f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59'] + $p
+        ), 'v', 'm'));
+    }
+
+    /** Mouvements de caisse du jour par caisse : entrées, sorties. @return array<int, array{in: float, out: float}> */
+    public function cashToday(?int $siteId): array
+    {
+        [$s, $p] = $this->sites('c.site_id', $siteId, 'ct');
+        $out = [];
+        foreach ($this->db->fetchAll(
+            "SELECT e.register_id, SUM(IF(e.direction = 'in', e.amount, 0)) AS cin, SUM(IF(e.direction = 'out', e.amount, 0)) AS cout
+               FROM cash_entries e JOIN cash_registers c ON c.id = e.register_id WHERE e.entry_date = CURDATE() AND $s GROUP BY e.register_id",
+            $p
+        ) as $row) {
+            $out[(int) $row['register_id']] = ['in' => (float) $row['cin'], 'out' => (float) $row['cout']];
+        }
+
+        return $out;
+    }
+
+    /** Écarts constatés aux arrêtés de caisse sur la période (somme et nombre de journées avec écart). */
+    public function cashGaps(string $from, string $to, ?int $siteId): array
+    {
+        [$s, $p] = $this->sites('c.site_id', $siteId, 'cg');
+
+        return $this->db->fetchOne(
+            "SELECT COALESCE(SUM(cl.gap), 0) AS amount, COALESCE(SUM(ABS(cl.gap) > 0.005), 0) AS days
+               FROM cash_closings cl JOIN cash_registers c ON c.id = cl.register_id WHERE cl.closing_date BETWEEN :f AND :t AND $s",
+            ['f' => $from, 't' => $to] + $p
+        ) ?? ['amount' => 0, 'days' => 0];
+    }
+
+    /** Décaissements d'un statut donné, les plus récents ou les plus anciens d'abord. */
+    public function paymentsList(?int $siteId, string $status, int $limit = 6, ?int $requestedBy = null): array
+    {
+        [$s, $p] = $this->sites('p.site_id', $siteId, 'pl');
+        $mine = '';
+        if ($requestedBy !== null) {
+            $mine = ' AND p.requested_by = :mine';
+            $p['mine'] = $requestedBy;
+        }
+        $statusSql = $status === 'any' ? '1=1' : 'p.status = :st';
+        if ($status !== 'any') {
+            $p['st'] = $status;
+        }
+
+        return $this->db->fetchAll(
+            "SELECT p.id, p.reference, p.kind, p.status, p.amount, p.requested_at, p.approved_at, p.paid_at, s.name AS site,
+                    COALESCE(sp.name, p.beneficiary, '—') AS party
+               FROM payment_requests p JOIN sites s ON s.id = p.site_id LEFT JOIN suppliers sp ON sp.id = p.supplier_id
+              WHERE $statusSql AND $s$mine
+              ORDER BY " . ($status === 'approved' ? 'p.approved_at' : 'COALESCE(p.paid_at, p.requested_at) DESC') . ' LIMIT ' . max(1, $limit),
+            $p
+        );
+    }
+
+    /** États de besoins d'un demandeur : compteurs par statut, exécutés sur la période, délai moyen d'approbation (jours). */
+    public function myRequests(int $userId, string $from, string $to): array
+    {
+        $row = $this->db->fetchOne(
+            "SELECT COALESCE(SUM(status = 'pending'), 0) AS pending, COALESCE(SUM(status = 'approved'), 0) AS approved,
+                    COALESCE(SUM(status = 'executed' AND executed_at BETWEEN :f AND :t), 0) AS executed,
+                    COALESCE(SUM(status = 'cancelled' AND requested_at BETWEEN :f2 AND :t2), 0) AS cancelled,
+                    AVG(IF(approved_at IS NOT NULL AND requested_at BETWEEN :f3 AND :t3, TIMESTAMPDIFF(HOUR, requested_at, approved_at), NULL)) / 24 AS lead
+               FROM purchase_requests WHERE requested_by = :u",
+            ['u' => $userId, 'f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59', 'f2' => $from . ' 00:00:00', 't2' => $to . ' 23:59:59', 'f3' => $from . ' 00:00:00', 't3' => $to . ' 23:59:59']
+        ) ?? [];
+
+        return ['pending' => (int) ($row['pending'] ?? 0), 'approved' => (int) ($row['approved'] ?? 0), 'executed' => (int) ($row['executed'] ?? 0),
+            'cancelled' => (int) ($row['cancelled'] ?? 0), 'lead' => isset($row['lead']) ? round((float) $row['lead'], 1) : null];
+    }
+
+    /** EDB exécutés d'un demandeur, par mois. @return array<string, float> */
+    public function myExecutedByMonth(int $userId, string $from, string $to): array
+    {
+        return array_map('floatval', array_column($this->db->fetchAll(
+            "SELECT DATE_FORMAT(executed_at, '%Y-%m') AS m, COUNT(*) AS v FROM purchase_requests
+              WHERE requested_by = :u AND status = 'executed' AND executed_at BETWEEN :f AND :t GROUP BY m",
+            ['u' => $userId, 'f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59']
+        ), 'v', 'm'));
+    }
+
+    /**
+     * Dernières demandes d'un utilisateur avec leur avancement en 4 étapes : émis, validé, servi ou commandé, exécuté.
+     */
+    public function myRecentRequests(int $userId, int $limit = 8): array
+    {
+        return $this->db->fetchAll(
+            "SELECT r.id, r.reference, r.subject, r.status, r.urgency, r.requested_at, r.approved_at, r.executed_at, s.name AS site,
+                    (EXISTS (SELECT 1 FROM purchase_orders o WHERE o.request_id = r.id AND o.status <> 'cancelled')
+                     OR EXISTS (SELECT 1 FROM purchase_fulfilments f JOIN purchase_request_lines l ON l.id = f.request_line_id WHERE l.request_id = r.id)) AS in_progress,
+                    (SELECT st.name FROM approval_requests ar JOIN approval_flow_steps st ON st.id = ar.current_step_id
+                      WHERE ar.entity_type = 'purchase_request' AND ar.entity_id = r.id AND ar.status = 'pending' ORDER BY ar.id DESC LIMIT 1) AS waiting_step
+               FROM purchase_requests r JOIN sites s ON s.id = r.site_id
+              WHERE r.requested_by = :u ORDER BY r.requested_at DESC LIMIT " . max(1, $limit),
+            ['u' => $userId]
+        );
+    }
+
     /** Engins en route entre deux sites. */
     public function fleetInTransit(?int $siteId): int
     {

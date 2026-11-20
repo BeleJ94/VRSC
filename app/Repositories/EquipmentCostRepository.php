@@ -126,9 +126,12 @@ final class EquipmentCostRepository extends Repository
      *
      * @param 'month'|'site'|'equipment' $group
      */
-    public function costsBetween(string $from, string $to, ?int $siteId, string $group, int $limit = 0): array
+    public function costsBetween(string $from, string $to, ?int $siteId, string $group, int $limit = 0, array $kinds = []): array
     {
         [$scopeSql, $params] = $this->scope->clause('c.site_id');
+        if ($kinds !== []) {
+            $scopeSql .= " AND c.kind IN ('" . implode("', '", array_intersect($kinds, self::KINDS)) . "')";
+        }
         $key = ['month' => "DATE_FORMAT(c.cost_date, '%Y-%m')", 'site' => 'c.site_id', 'equipment' => 'c.equipment_id'][$group];
         $site = '';
         if ($siteId !== null) {

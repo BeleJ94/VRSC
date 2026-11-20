@@ -3,8 +3,8 @@
  * En-tête commun des tableaux de bord : titre, onglets des vues accessibles, période, site, bandeau « À traiter ».
  * @var string $dashView  @var list<string> $views  @var array|null $period  @var array $sites  @var int|null $siteId  @var array $todo
  */
-$viewIcons = ['executive' => 'presentation', 'finance' => 'landmark', 'purchasing' => 'shopping-bag', 'stores' => 'warehouse', 'maintenance' => 'wrench'];
-$viewLabels = ['executive' => 'dashboard.view_executive', 'finance' => 'dashboard.view_finance', 'purchasing' => 'dashboard.view_purchasing', 'stores' => 'dashboard.view_stores', 'maintenance' => 'dashboard.view_maintenance'];
+$viewIcons = ['executive' => 'presentation', 'finance' => 'landmark', 'cash' => 'wallet', 'purchasing' => 'shopping-bag', 'stores' => 'warehouse', 'maintenance' => 'wrench', 'requests' => 'inbox'];
+$viewLabels = ['executive' => 'dashboard.view_executive', 'finance' => 'dashboard.view_finance', 'purchasing' => 'dashboard.view_purchasing', 'stores' => 'dashboard.view_stores', 'maintenance' => 'dashboard.view_maintenance', 'cash' => 'dashboard.view_cash', 'requests' => 'dashboard.view_requests'];
 $periodLabels = ['month' => 'dashboard.period_month', 'last_month' => 'dashboard.period_last_month', 'quarter' => 'dashboard.period_quarter', 'year' => 'dashboard.period_year'];
 $sq = ($siteId ?? null) !== null ? ['site_id' => $siteId] : [];
 $todoDrills = [
@@ -25,7 +25,7 @@ $todoLabels = [
     <?php if (count($views) > 1): ?>
         <nav class="xdash-tabs" aria-label="<?= e(t('dashboard.views')) ?>">
             <?php foreach ($views as $v): ?>
-                <a href="<?= e(url('/', ['view' => $v] + ($period !== null && $v !== 'maintenance' ? ['period' => $period['key']] : []))) ?>"<?= $v === $dashView ? ' aria-current="page"' : '' ?>><i data-lucide="<?= e($viewIcons[$v]) ?>"></i><?= e(t($viewLabels[$v])) ?></a>
+                <a href="<?= e(url('/', ['view' => $v] + ($period !== null ? ['period' => $period['key']] : []))) ?>"<?= $v === $dashView ? ' aria-current="page"' : '' ?>><i data-lucide="<?= e($viewIcons[$v]) ?>"></i><?= e(t($viewLabels[$v])) ?></a>
             <?php endforeach; ?>
         </nav>
     <?php endif; ?>

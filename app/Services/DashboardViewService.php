@@ -21,15 +21,24 @@ final class DashboardViewService
     public const VIEWS = [
         'executive' => 'dashboard.executive',
         'finance' => 'finance.view',
+        'cash' => 'cash.manage',
         'purchasing' => 'dashboard.purchasing',
         'stores' => 'dashboard.stores',
         'maintenance' => 'equipment.view',
+        'requests' => 'edb.create',
     ];
+
+    /** Vues à période (indicateurs et tendances calculés sur la période choisie). */
+    public const PERIOD_VIEWS = ['executive', 'finance', 'cash', 'purchasing', 'stores', 'maintenance', 'requests'];
+
+    /** Natures de coût de maintenance (hors carburant et charges diverses). */
+    private const MAINTENANCE_KINDS = ['parts', 'lubricants', 'tyres_filters', 'labor', 'external'];
 
     /** Vue par défaut selon le rôle principal. */
     private const DEFAULT_VIEW = [
         'director' => 'executive', 'logistics' => 'executive', 'admin' => 'executive',
-        'finance' => 'finance', 'cashier' => 'finance', 'buyer' => 'purchasing', 'storekeeper' => 'stores',
+        'finance' => 'finance', 'cashier' => 'cash', 'buyer' => 'purchasing', 'storekeeper' => 'stores',
+        'requester' => 'requests', 'supervisor' => 'requests',
     ];
 
     public function __construct(
@@ -39,6 +48,8 @@ final class DashboardViewService
         private readonly EquipmentCostRepository $costs,
         private readonly SiteRepository $sites,
         private readonly NavCounterService $counters,
+        private readonly DashboardService $dashboard,
+        private readonly ApprovalService $approvals,
     ) {
     }
 
@@ -189,6 +200,97 @@ final class DashboardViewService
                 ['key' => 'out_of_service', 'count' => $outOfService, 'url' => '/equipment?status=out_of_service', 'level' => 'info', 'icon' => 'ban'],
                 ['key' => 'in_transit', 'count' => $this->exec->fleetInTransit($siteId), 'url' => '/fleet-transfers', 'level' => 'info', 'icon' => 'route'],
             ], static fn (array $a): bool => $a['count'] > 0)),
+        ];
+    }
+
+    /** Vue Maintenance (compacte) : disponibilité, engins arrêtés, OT, préventif, MTTR, coût de maintenance ; semaines, arrêts, échéances. */
+    public function maintenance(array $period, ?int $siteId): array
+    {
+        $stats = $this->dashboard->data($siteId);
+        $trend = ExecutiveDashboardRepository::trendMonths($period['to']);
+        $earliest = min($trend[0] . '-01', $period['prev_from']);
+        $costMonths = array_column($this->costs->costsBetween($earliest, $period['to'], $siteId, 'month', 0, self::MAINTENANCE_KINDS), 'total', 'k');
+        $cost = fn (string $from, string $to): float => (float) array_sum(array_column($this->costs->costsBetween($from, $to, $siteId, 'month', 0, self::MAINTENANCE_KINDS), 'total'));
+        $done = $this->exec->workOrdersDoneByMonth($earliest, $period['to'], $siteId);
+        $doneSum = fn (string $from, string $to): float => ExecutiveDashboardRepository::sum($this->exec->workOrdersDoneByMonth($from, $to, $siteId));
+        $eq = $stats['equipment'];
+        $down = (int) $eq['by_status']['breakdown'] + (int) $eq['by_status']['maintenance'] + (int) $eq['by_status']['waiting_part'] + (int) $eq['by_status']['immobilized'];
+        $wo = $stats['work_orders'];
+
+        return [
+            'kpis' => [
+                'availability' => self::kpi((float) ($eq['availability'] ?? 0), null, 'up', [], ['available' => (int) $eq['by_status']['available'], 'total' => (int) $eq['total']]),
+                'down' => self::kpi((float) $down, null, 'down', [], ['breakdown' => (int) $eq['by_status']['breakdown'], 'pending_release' => (int) ($eq['by_status']['pending_release'] ?? 0)]),
+                'open' => self::kpi((float) $wo['open'], null, 'down', [], ['critical' => (int) $wo['critical'], 'overdue' => (int) $wo['overdue']]),
+                'done' => self::kpi($doneSum($period['from'], $period['to']), $doneSum($period['prev_from'], $period['prev_to']), 'neutral', self::series($done, $trend)),
+                'preventive' => self::kpi((float) $stats['preventive_due'], null, 'down'),
+                'cost' => self::kpi($cost($period['from'], $period['to']), $cost($period['prev_from'], $period['prev_to']), 'down', self::series($costMonths, $trend)),
+            ],
+            'mttr' => $wo['mttr_hours'],
+            'trend_months' => $trend,
+            'weekly' => $stats['weekly'],
+            'down_list' => $this->exec->equipmentDown($siteId),
+            'preventive' => $this->exec->upcomingPreventive($siteId),
+            'meters' => $stats['meters'],
+        ];
+    }
+
+    /** Vue Caisse : trésorerie, décaissements à payer, payés, mouvements du jour, journées à arrêter, écarts ; caisses, listes. */
+    public function cash(array $period, ?int $siteId): array
+    {
+        $trend = ExecutiveDashboardRepository::trendMonths($period['to']);
+        $earliest = min($trend[0] . '-01', $period['prev_from']);
+        $paid = $this->exec->paidByMonth($earliest, $period['to'], $siteId);
+        $registers = $this->exec->registers($siteId);
+        $today = $this->exec->cashToday($siteId);
+        $pipeline = $this->exec->paymentPipeline($siteId);
+        $gaps = $this->exec->cashGaps($period['from'], $period['to'], $siteId);
+        foreach ($registers as &$r) {
+            $r['today_in'] = $today[(int) $r['id']]['in'] ?? 0.0;
+            $r['today_out'] = $today[(int) $r['id']]['out'] ?? 0.0;
+        }
+        unset($r);
+
+        return [
+            'kpis' => [
+                'cash' => self::kpi(round(array_sum(array_column($registers, 'balance')), 2), null, 'neutral', [], ['registers' => count($registers)]),
+                'to_pay' => self::kpi((float) ($pipeline['to_pay_amount'] ?? 0), null, 'down', [], ['count' => (int) ($pipeline['to_pay_count'] ?? 0)]),
+                'paid' => self::kpi(ExecutiveDashboardRepository::sum($this->exec->paidByMonth($period['from'], $period['to'], $siteId)),
+                    ExecutiveDashboardRepository::sum($this->exec->paidByMonth($period['prev_from'], $period['prev_to'], $siteId)), 'neutral', self::series($paid, $trend)),
+                'today_out' => self::kpi(round(array_sum(array_column($registers, 'today_out')), 2), null, 'neutral', [], ['in' => round(array_sum(array_column($registers, 'today_in')), 2)]),
+                'open_days' => self::kpi((float) array_sum(array_map(static fn (array $r): int => (int) $r['open_days'], $registers)), null, 'down'),
+                'gaps' => self::kpi(round((float) $gaps['amount'], 2), null, 'neutral', [], ['days' => (int) $gaps['days']]),
+            ],
+            'trend_months' => $trend,
+            'registers' => $registers,
+            'to_pay' => $this->exec->paymentsList($siteId, 'approved', 8),
+            'paid_list' => $this->exec->paymentsList($siteId, 'paid', 6),
+        ];
+    }
+
+    /** Vue « Mes demandes » : états de besoins et décaissements du compte connecté, avis à donner. */
+    public function requests(array $period, ?int $siteId): array
+    {
+        $user = $this->auth->user();
+        $userId = $user?->id ?? 0;
+        $trend = ExecutiveDashboardRepository::trendMonths($period['to']);
+        $mine = $this->exec->myRequests($userId, $period['from'], $period['to']);
+        $prev = $this->exec->myRequests($userId, $period['prev_from'], $period['prev_to']);
+        $executed = $this->exec->myExecutedByMonth($userId, min($trend[0] . '-01', $period['prev_from']), $period['to']);
+
+        return [
+            'kpis' => [
+                'pending' => self::kpi((float) $mine['pending'], null, 'down'),
+                'approved' => self::kpi((float) $mine['approved'], null, 'down'),
+                'executed' => self::kpi((float) $mine['executed'], (float) $prev['executed'], 'up', self::series($executed, $trend)),
+                'lead' => self::kpi((float) ($mine['lead'] ?? 0), $prev['lead'], 'down', [], ['empty' => $mine['lead'] === null]),
+                'approvals' => self::kpi((float) ($user?->can('approvals.use') ? count($this->approvals->inbox()) : 0), null, 'down', [], ['allowed' => (bool) $user?->can('approvals.use')]),
+                'cancelled' => self::kpi((float) $mine['cancelled'], null, 'down'),
+            ],
+            'trend_months' => $trend,
+            'recent' => $this->exec->myRecentRequests($userId),
+            'payments' => $user?->can('finance.request') ? $this->exec->paymentsList(null, 'any', 6, $userId) : null,
+            'user_id' => $userId,
         ];
     }
 

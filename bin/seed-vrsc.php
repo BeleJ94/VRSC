@@ -1023,8 +1023,8 @@ foreach ($eq as $id => $e) {
     $current = (int) round($e['meter']);
     $done = $current - (int) round($e['since_service']);
     attempt('plan préventif', static fn () => svc($site[$e['site']]['manager'], PreventiveService::class)->create($e['km']
-        ? ['equipment_id' => $id, 'title' => 'Entretien 10 000 km', 'interval_km' => '10000', 'interval_days' => '180', 'last_done_at' => date('Y-m-d', strtotime('-' . mt_rand(10, 120) . ' days')), 'last_done_km' => (string) $done]
-        : ['equipment_id' => $id, 'title' => 'Entretien 250 h', 'interval_hours' => '250', 'interval_days' => '90', 'last_done_at' => date('Y-m-d', strtotime('-' . mt_rand(5, 60) . ' days')), 'last_done_hours' => (string) $done]));
+        ? ['equipment_id' => $id, 'is_active' => '1', 'title' => 'Entretien 10 000 km', 'interval_km' => '10000', 'interval_days' => '180', 'last_done_at' => date('Y-m-d', strtotime('-' . mt_rand(10, 120) . ' days')), 'last_done_km' => (string) $done]
+        : ['equipment_id' => $id, 'is_active' => '1', 'title' => 'Entretien 250 h', 'interval_hours' => '250', 'interval_days' => '90', 'last_done_at' => date('Y-m-d', strtotime('-' . mt_rand(5, 60) . ' days')), 'last_done_hours' => (string) $done]));
 }
 @unlink($proofPath);
 

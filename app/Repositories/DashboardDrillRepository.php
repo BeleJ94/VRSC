@@ -50,13 +50,17 @@ final class DashboardDrillRepository extends Repository
         [$scope, $params] = $this->scope->clause('p.site_id');
         $dateCol = ['paid' => 'p.paid_at', 'approved' => 'p.approved_at'][$filters['date_field'] ?? ''] ?? 'COALESCE(p.paid_at, p.approved_at, p.requested_at)';
         $base = $this->db->pdo()->quote(url('/finance/payments/'));
-        $source = "(SELECT p.id, p.site_id, p.reference, $dateCol AS date, s.name AS site, COALESCE(sp.name, p.beneficiary, '—') AS party,
+        $source = "(SELECT p.id, p.site_id, p.requested_by, p.reference, $dateCol AS date, s.name AS site, COALESCE(sp.name, p.beneficiary, '—') AS party,
                            p.category, p.kind, p.amount, p.status, CONCAT($base, p.id) AS link
                       FROM payment_requests p JOIN sites s ON s.id = p.site_id LEFT JOIN suppliers sp ON sp.id = p.supplier_id
                      WHERE $scope) x";
         $where = [];
         $fp = [];
         self::common($filters, $where, $fp);
+        if (!empty($filters['requested_by'])) {
+            $where[] = 'x.requested_by = :f_mine';
+            $fp['f_mine'] = (int) $filters['requested_by'];
+        }
         foreach (['status', 'kind', 'category'] as $key) {
             if (!empty($filters[$key])) {
                 $values = explode(',', (string) $filters[$key]);

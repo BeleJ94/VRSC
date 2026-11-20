@@ -153,6 +153,7 @@ return static function (Router $r): void {
     $r->get('/closings', [\App\Controllers\ClosingController::class, 'index'], ['permission' => 'closings.view']);
     // Listes de détail des tableaux de bord
     $r->get('/dashboard/drill/payments', [\App\Controllers\DashboardDrillController::class, 'payments'], ['permission' => 'finance.view']);
+    $r->get('/dashboard/drill/my-payments', [\App\Controllers\DashboardDrillController::class, 'myPayments'], ['permission' => 'finance.request']);
     $r->get('/dashboard/drill/invoices', [\App\Controllers\DashboardDrillController::class, 'invoices'], ['permission' => 'finance.view']);
     $r->get('/dashboard/drill/commitments', [\App\Controllers\DashboardDrillController::class, 'commitments'], ['permission' => 'finance.view']);
     $r->get('/dashboard/drill/orders', [\App\Controllers\DashboardDrillController::class, 'orders'], ['permission' => 'edb.view']);
