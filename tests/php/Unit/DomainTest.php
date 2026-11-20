@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use AppDomainRole;
 use App\Domain\EquipmentStatus;
 use App\Domain\EquipmentStatusResolver;
 use App\Domain\MeterForecast;
@@ -16,6 +17,16 @@ use PHPUnit\Framework\TestCase;
 
 final class DomainTest extends TestCase
 {
+    public function testManagementReportsAreOpenToDirectionAndLogistics(): void
+    {
+        foreach ([Role::Director, Role::Logistics, Role::Manager, Role::Admin, Role::Viewer] as $role) {
+            self::assertTrue($role->can('reports.view'), $role->value);
+        }
+        foreach ([Role::Storekeeper, Role::Cashier, Role::Requester, Role::Technician] as $role) {
+            self::assertFalse($role->can('reports.view'), $role->value);
+        }
+    }
+
     public function testChartColorsAreTheImposedOnes(): void
     {
         self::assertSame('#1E7A4C', EquipmentStatus::Available->color());

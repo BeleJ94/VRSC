@@ -99,7 +99,7 @@ enum Role: string
         'equipment.assign' => ['admin', 'manager'],
         'documents.manage' => ['admin', 'manager'],
         'activity.view' => ['admin', 'manager'],
-        'reports.view' => ['admin', 'manager', 'viewer'],
+        'reports.view' => ['admin', 'manager', 'viewer', 'director', 'logistics'],
         'sites.manage' => ['admin'],
         'users.manage' => ['admin'],
         'settings.manage' => ['admin'],
