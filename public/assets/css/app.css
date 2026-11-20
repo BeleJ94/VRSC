@@ -213,14 +213,14 @@ div.dt-container .dt-processing > div:last-child > div { background: var(--accen
 .auth:has(.login) { display: block; padding: 0; }
 .login {
   position: relative; width: 100%; min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
-  background: #1a1512 url("../img/mining.svg") center bottom / cover no-repeat;
+  background: #06111d url("../img/login-scene.svg") center bottom / cover no-repeat;
 }
 /* Voile sombre : lisibilité du texte et contraste de la carte */
 .login::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(10,15,22,.75) 0%, rgba(10,15,22,.35) 55%, rgba(10,15,22,.55) 100%),
-    linear-gradient(180deg, rgba(10,15,22,.6) 0%, transparent 40%, transparent 70%, rgba(10,15,22,.6) 100%);
+    linear-gradient(90deg, rgba(4,12,20,.55) 0%, rgba(4,12,20,.12) 50%, rgba(4,12,20,.3) 100%),
+    linear-gradient(180deg, rgba(4,12,20,.35) 0%, transparent 35%, transparent 80%, rgba(4,12,20,.45) 100%);
 }
 .login > * { position: relative; }
 .login__hero { color: #fff; padding: 48px 56px; display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-6); }

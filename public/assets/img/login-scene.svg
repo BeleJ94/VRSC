@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+  <!-- Scène de connexion ETHAN VRSC : lever de soleil aux couleurs du logo, activités de VRSC en silhouettes
+       (magasin et conteneurs, cuve de carburant, pelle chargeant un tombereau, bus de personnel). -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#06111d"/>
+      <stop offset=".38" stop-color="#0b2238"/>
+      <stop offset=".58" stop-color="#123a5e"/>
+      <stop offset=".74" stop-color="#2c4d6b"/>
+      <stop offset=".8" stop-color="#8a6a5a"/>
+      <stop offset=".84" stop-color="#d9915e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="820" cy="690" r="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f5a369" stop-opacity=".55"/>
+      <stop offset=".35" stop-color="#f5a369" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#f5a369" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b3f62"/><stop offset="1" stop-color="#132f4b"/></linearGradient>
+    <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f2740"/><stop offset="1" stop-color="#0b1e31"/></linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#081624"/><stop offset="1" stop-color="#040b13"/></linearGradient>
+    <linearGradient id="track" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f5a369" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#f5a369" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#f5a369" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ciel, étoiles, soleil levant -->
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <g fill="#ffffff">
+    <circle cx="120" cy="60" r="1.4" opacity=".5"/><circle cx="310" cy="130" r="1" opacity=".35"/><circle cx="520" cy="48" r="1.2" opacity=".45"/>
+    <circle cx="700" cy="160" r="1" opacity=".3"/><circle cx="930" cy="70" r="1.4" opacity=".5"/><circle cx="1120" cy="140" r="1" opacity=".35"/>
+    <circle cx="1290" cy="56" r="1.2" opacity=".45"/><circle cx="1480" cy="120" r="1" opacity=".3"/><circle cx="1560" cy="40" r="1.3" opacity=".4"/>
+    <circle cx="420" cy="230" r=".9" opacity=".25"/><circle cx="1010" cy="250" r=".9" opacity=".25"/><circle cx="1380" cy="260" r=".9" opacity=".2"/>
+  </g>
+  <g transform="translate(0 55)">
+  <rect y="-55" width="1600" height="900" fill="url(#glow)"/>
+  <circle cx="820" cy="704" r="62" fill="#f8b27f"/>
+  <circle cx="820" cy="704" r="62" fill="#f5a369" opacity=".55"/>
+
+  <!-- Collines lointaines et gradins de la fosse -->
+  <path d="M0 668 L140 650 L300 662 L470 640 L640 660 L760 652 L980 664 L1150 646 L1330 660 L1480 648 L1600 656 L1600 900 L0 900Z" fill="url(#far)"/>
+  <path d="M0 700 L180 686 L360 698 L520 684 L700 700 L1010 696 L1180 682 L1380 696 L1600 688 L1600 900 L0 900Z" fill="url(#mid)"/>
+  <path d="M520 700 L640 718 L1090 718 L1180 700Z" fill="#0d2236" opacity=".9"/>
+  <path d="M600 718 L700 734 L1040 734 L1110 718Z" fill="#0a1b2c" opacity=".9"/>
+
+  <!-- Sol et piste -->
+  <path d="M0 734 L1600 726 L1600 900 L0 900Z" fill="url(#ground)"/>
+  <path d="M0 812 C 380 772, 760 760, 1000 762 S 1450 778, 1600 770 L1600 790 C 1450 798, 1200 784, 1000 784 S 380 796, 0 836Z" fill="url(#track)"/>
+
+  <g fill="#03090f">
+    <!-- Magasin central et conteneurs (stocks) -->
+    <path d="M70 734 L70 676 L170 646 L270 676 L270 734Z"/>
+    <rect x="270" y="694" width="96" height="40"/>
+    <rect x="276" y="656" width="84" height="36"/>
+    <rect x="366" y="702" width="84" height="32"/>
+    <!-- Éclairage de chantier -->
+    <rect x="478" y="608" width="4" height="126"/>
+    <rect x="466" y="604" width="28" height="8" rx="2"/>
+    <!-- Cuve de carburant sur berceau -->
+    <rect x="530" y="694" width="120" height="30" rx="15"/>
+    <rect x="542" y="722" width="8" height="12"/><rect x="630" y="722" width="8" height="12"/>
+    <rect x="584" y="686" width="10" height="9"/>
+
+    <!-- Pelle hydraulique : chenilles, tourelle, cabine, flèche, balancier, godet -->
+    <g transform="translate(-50 0)">
+    <rect x="690" y="708" width="150" height="26" rx="13"/>
+    <path d="M700 708 L700 680 L800 670 L842 678 L842 708Z"/>
+    <path d="M706 680 L706 648 L742 646 L752 676Z"/>
+    <path d="M790 676 L812 666 L930 604 L944 620 L826 690Z"/>
+    <path d="M922 600 L944 596 L992 676 L974 684Z"/>
+    <path d="M962 676 L1004 668 L1018 700 L996 716 L966 706Z"/>
+    </g>
+
+    <!-- Tombereau articulé en chargement -->
+    <g transform="translate(-62 0)">
+    <path d="M1020 668 L1180 668 L1196 712 L1032 712Z"/>
+    <path d="M1196 690 L1250 690 L1262 712 L1196 712Z"/>
+    <path d="M1206 662 L1246 662 L1250 690 L1202 690Z"/>
+    <rect x="1030" y="708" width="226" height="10"/>
+    <circle cx="1058" cy="728" r="22"/><circle cx="1116" cy="728" r="22"/><circle cx="1230" cy="728" r="22"/>
+    </g>
+
+    <!-- Bus de transport du personnel -->
+    <path d="M1342 676 Q1342 660 1358 660 L1582 660 Q1600 660 1600 676 L1600 726 L1342 726Z"/>
+    <circle cx="1386" cy="730" r="15"/><circle cx="1556" cy="730" r="15"/>
+  </g>
+
+  <!-- Petites lumières : projecteur, cabine, fenêtres du bus -->
+  <g fill="#f5a369">
+    <rect x="470" y="611" width="20" height="3" rx="1.5" opacity=".9"/>
+    <path d="M470 614 L380 734 L580 734 L490 614Z" opacity=".05"/>
+    <rect x="664" y="654" width="20" height="14" rx="2" opacity=".55"/>
+    <rect x="1150" y="668" width="26" height="14" rx="2" opacity=".5"/>
+    <rect x="1362" y="672" width="30" height="16" rx="2" opacity=".35"/>
+    <rect x="1400" y="672" width="30" height="16" rx="2" opacity=".35"/>
+    <rect x="1438" y="672" width="30" height="16" rx="2" opacity=".35"/>
+    <rect x="1476" y="672" width="30" height="16" rx="2" opacity=".35"/>
+    <rect x="1514" y="672" width="30" height="16" rx="2" opacity=".35"/>
+    <rect x="1552" y="672" width="30" height="16" rx="2" opacity=".35"/>
+    <rect x="96" y="700" width="18" height="24" opacity=".25"/>
+  </g>
+  </g>
+  <!-- Le sol descend jusqu'au bas du cadre malgré le décalage -->
+  <rect y="880" width="1600" height="20" fill="#040b13"/>
+</svg>
