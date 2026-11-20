@@ -132,6 +132,7 @@ final class WorkOrderController extends Controller
             'services' => $this->workOrders->services((int) $wo['id']),
             'canAddService' => $canExecute && $status !== WorkOrderStatus::Cancelled,
             'comments' => $this->workOrders->comments((int) $wo['id']),
+            'checks' => $this->workOrders->checks((int) $wo['id']),
             'maintenanceStaff' => $canExecute ? $this->personnel->forSite((int) $wo['site_id'], Workforce::MAINTENANCE_JOBS) : [],
             'canComment' => $user->can('workorder.execute'),
         ];
@@ -206,6 +207,17 @@ final class WorkOrderController extends Controller
         }
 
         return $this->redirect($this->back($request, $id) . '#comments', t('flash.comment_added'));
+    }
+
+    public function check(Request $request, array $params): Response
+    {
+        $id = $this->id($params);
+        $this->service->setCheck($id, (int) ($params['checkId'] ?? 0), $request->body);
+        if ($request->wantsJson()) {
+            return $this->json(['ok' => true, 'message' => t('flash.check_saved')]);
+        }
+
+        return $this->redirect($this->back($request, $id) . '#checklist', t('flash.check_saved'));
     }
 
     private function back(Request $request, int $id): string

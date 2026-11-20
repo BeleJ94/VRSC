@@ -2054,3 +2054,20 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
 /* Rapport PDF de direction */
 .xdash-report { min-height: 34px; white-space: nowrap; }
 .xdash-report [data-lucide] { width: 15px; height: 15px; }
+
+/* Opérations du préventif (OT) */
+.wochk { list-style: none; margin: 0; padding: 0; }
+.wochk__item { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); }
+.wochk__item:first-child { border-top: 0; }
+.wochk__label { display: flex; gap: 10px; align-items: flex-start; flex: 1 1 260px; min-width: 0; }
+.wochk__num { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600; background: var(--surface-2, #EEF1F5); color: var(--text-muted, #5B6573); }
+.wochk__item.is-ok .wochk__num { background: #067647; color: #fff; }
+.wochk__item.is-nok .wochk__num { background: #B42318; color: #fff; }
+.wochk__item.is-na .wochk__num { background: #98A2B3; color: #fff; }
+.wochk__form { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; flex: 1 1 320px; justify-content: flex-end; }
+.wochk__form .input { flex: 1 1 160px; min-width: 0; min-height: 36px; }
+.wochk__choices { display: inline-flex; gap: 4px; }
+.wochk__btn [data-lucide] { width: 14px; height: 14px; }
+.wochk__btn--ok.is-active { background: #067647; border-color: #067647; color: #fff; }
+.wochk__btn--nok.is-active { background: #B42318; border-color: #B42318; color: #fff; }
+.wochk__btn--na.is-active { background: #667085; border-color: #667085; color: #fff; }

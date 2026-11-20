@@ -91,6 +91,7 @@ if ($wo['completed_at']) {
             <?php endif; ?>
         </section>
 
+        <?= $view->partial('work_orders/_checklist', ['wo' => $wo, 'checks' => $checks ?? [], 'canExecute' => $canExecute, 'back' => 'desktop']) ?>
         <?= $view->partial('work_orders/_comments', ['wo' => $wo, 'comments' => $comments, 'canComment' => $canComment, 'back' => 'desktop']) ?>
     </div>
     <div>
@@ -126,4 +127,4 @@ if ($wo['completed_at']) {
 
 <?= $view->partial('partials/activity', ['activity' => $activity]) ?>
 
-<script type="application/json" id="wo-data"><?= json_for_html(['wo' => $wo, 'parts' => $parts, 'technicians' => $technicians ?? []]) ?></script>
+<script type="application/json" id="wo-data"><?= json_for_html(['wo' => $wo + ['checks' => $checks ?? []], 'parts' => $parts, 'technicians' => $technicians ?? []]) ?></script>

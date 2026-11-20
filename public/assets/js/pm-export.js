@@ -474,6 +474,30 @@
       };
     }
 
+    // Opérations du préventif : une case par réponse (OK, anomalie, N/A) et une observation, à cocher à la main si vierge.
+    function checklistBlock(checks) {
+      if (!checks || !checks.length) return [];
+      var MARK = { ok: '#067647', nok: '#B42318', na: GREY };
+      var box = function (c, s) {
+        return { text: c.status === s ? 'X' : '', bold: true, alignment: 'center', color: MARK[s] };
+      };
+      return [
+        section(t('js.wo_doc.checklist')),
+        {
+          table: {
+            headerRows: 1,
+            widths: [14, '*', 30, 46, 30, 130],
+            body: [['#', t('js.wo_doc.operation'), t('js.wo_doc.check_ok'), t('js.wo_doc.check_nok'), t('js.wo_doc.check_na'), t('js.wo_doc.observation')]
+              .map(function (h, i) { return { text: h, style: 'th', alignment: i >= 2 && i <= 4 ? 'center' : 'left' }; })]
+              .concat(checks.map(function (c) {
+                return [{ text: String(c.position), color: GREY }, c.label, box(c, 'ok'), box(c, 'nok'), box(c, 'na'), { text: c.note || '', fontSize: 8 }];
+              }))
+          },
+          layout: boxLayout
+        }
+      ];
+    }
+
     // Zone à remplir à la main si l'information manque (bon imprimé avant intervention).
     function textOrLines(text, lines) {
       if (text) return { text: text, lineHeight: 1.25 };
@@ -548,10 +572,11 @@
         columnGap: 12
       },
       section(t('fields.description')),
-      textOrLines(wo.description, 2),
+      textOrLines(wo.description, 2)
+    ].concat(checklistBlock(wo.checks)).concat([
       section(t('fields.resolution')),
       textOrLines(wo.resolution, 4)
-    ];
+    ]);
 
     if (wo.failure_cause) {
       content.push({ text: [{ text: t('fields.failure_cause') + ' : ', color: GREY }, { text: t('cause.' + wo.failure_cause), bold: true }], margin: [0, 6, 0, 0] });

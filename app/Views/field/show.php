@@ -9,7 +9,9 @@
     <?php if ($wo['resolution']): ?><p><strong><?= e(t('fields.resolution')) ?> :</strong> <?= nl2br(e($wo['resolution'])) ?></p><?php endif; ?>
     <p style="margin: 12px 0 0"><button type="button" class="btn" data-wo-pdf><i data-lucide="printer"></i><?= e(t('work_orders.print')) ?></button></p>
 </div>
-<script type="application/json" id="wo-data"><?= json_for_html(['wo' => $wo, 'parts' => $parts]) ?></script>
+<script type="application/json" id="wo-data"><?= json_for_html(['wo' => $wo + ['checks' => $checks ?? []], 'parts' => $parts]) ?></script>
+
+<?= $view->partial('work_orders/_checklist', ['wo' => $wo, 'checks' => $checks ?? [], 'canExecute' => $canExecute, 'back' => 'terrain']) ?>
 
 <?php if ($parts !== []): ?>
     <h2><?= e(t('work_orders.parts')) ?></h2>

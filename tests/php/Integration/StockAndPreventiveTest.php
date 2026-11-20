@@ -87,6 +87,45 @@ final class StockAndPreventiveTest extends DatabaseTestCase
         self::assertSame(1550, (int) $plan['next_due_hours']);
     }
 
+    public function testPlanChecklistIsCopiedAndMustBeHandledBeforeCompletion(): void
+    {
+        $equipment = $this->createEquipment($this->site, 'CH-CL', 'available', 500);
+        $preventive = $this->service($this->manager, PreventiveService::class);
+        $preventive->create([
+            'equipment_id' => (string) $equipment, 'title' => 'Entretien 250 h', 'interval_hours' => '250', 'last_done_hours' => '250',
+            'last_done_at' => date('Y-m-d'), 'is_active' => '1', 'checklist' => "- Vidanger l'huile\n\n2) Remplacer le filtre\n• Graisser",
+        ]);
+        [$woId] = $preventive->generateDue();
+        $checks = $this->db->fetchAll('SELECT id, position, label, status FROM work_order_checks WHERE work_order_id = :w ORDER BY position', ['w' => $woId]);
+        self::assertSame(["Vidanger l'huile", 'Remplacer le filtre', 'Graisser'], array_column($checks, 'label'), 'Puces, numéros et lignes vides retirés');
+        self::assertSame(['todo', 'todo', 'todo'], array_column($checks, 'status'));
+
+        $orders = $this->service($this->manager, WorkOrderService::class);
+        try {
+            $orders->transition($woId, ['status' => 'done', 'resolution' => 'RAS', 'labor_minutes' => '60']);
+            self::fail('Clôture refusée tant que des opérations restent à traiter');
+        } catch (ValidationException $e) {
+            self::assertStringContainsString('3', implode(" ", $e->errors));
+        }
+        try {
+            $orders->setCheck($woId, (int) $checks[1]['id'], ['status' => 'nok']);
+            self::fail('Une anomalie exige une observation');
+        } catch (ValidationException) {
+        }
+
+        $orders->setCheck($woId, (int) $checks[0]['id'], ['status' => 'ok']);
+        $orders->setCheck($woId, (int) $checks[1]['id'], ['status' => 'nok', 'note' => 'Filtre absent du magasin']);
+        $orders->setCheck($woId, (int) $checks[2]['id'], ['status' => 'na']);
+        $row = $this->row('SELECT status, note, checked_by FROM work_order_checks WHERE id = :id', ['id' => $checks[1]['id']]);
+        self::assertSame(['nok', 'Filtre absent du magasin'], [$row['status'], $row['note']]);
+        self::assertNotNull($row['checked_by']);
+
+        $orders->transition($woId, ['status' => 'done', 'resolution' => 'RAS', 'labor_minutes' => '60']);
+        self::assertSame('done', $this->db->fetchValue('SELECT status FROM work_orders WHERE id = :id', ['id' => $woId]));
+        $this->expectException(ValidationException::class);
+        $orders->setCheck($woId, (int) $checks[0]['id'], ['status' => 'na']);
+    }
+
     public function testPlanUpdateLogsOnlyChangedFields(): void
     {
         $equipment = $this->createEquipment($this->site, 'CH-04');

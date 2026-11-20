@@ -55,6 +55,7 @@ $equipmentJson = $equipment ? [
         <div class="form-grid">
             <?= $f('title', 'text', ['required' => true, 'class' => 'span-2', 'attrs' => ['maxlength' => 150, 'placeholder' => t('preventive.title_placeholder')]]) ?>
             <?= $f('instructions', 'textarea', ['class' => 'span-2', 'hint' => t('preventive.instructions_hint')]) ?>
+            <?= $f('checklist', 'textarea', ['class' => 'span-2', 'hint' => t('preventive.checklist_hint'), 'attrs' => ['rows' => 6, 'placeholder' => t('preventive.checklist_placeholder')]]) ?>
             <div class="field">
                 <input type="hidden" name="is_active" value="0">
                 <label class="check"><input type="checkbox" name="is_active" value="1"<?= $active ? ' checked' : '' ?>> <?= e(t('fields.is_active')) ?></label>

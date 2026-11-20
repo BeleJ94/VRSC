@@ -31,6 +31,7 @@ final class PreventiveService
             'equipment_id' => 'required|int',
             'title' => 'required|string|max:150',
             'instructions' => 'string|max:5000',
+            'checklist' => 'string|max:5000',
             'interval_days' => 'int|min:1|max:3650',
             'interval_hours' => 'int|min:1|max:100000',
             'interval_km' => 'int|min:1|max:1000000',

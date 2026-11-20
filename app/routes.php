@@ -96,6 +96,7 @@ return static function (Router $r): void {
     $r->post('/work-orders/{id}/parts', [WorkOrderController::class, 'addPart'], ['permission' => 'workorder.execute']);
     $r->post('/work-orders/{id}/technicians', [WorkOrderController::class, 'addTechnician'], ['permission' => 'workorder.execute']);
     $r->post('/work-orders/{id}/technicians/{technicianId}/delete', [WorkOrderController::class, 'removeTechnician'], ['permission' => 'workorder.execute']);
+    $r->post('/work-orders/{id}/checks/{checkId}', [WorkOrderController::class, 'check'], ['permission' => 'workorder.execute']);
     $r->post('/work-orders/{id}/comments', [WorkOrderController::class, 'comment'], ['permission' => 'workorder.execute']);
     $r->post('/work-orders/{id}/services', [WorkOrderController::class, 'addService'], ['permission' => 'workorder.execute']);
 

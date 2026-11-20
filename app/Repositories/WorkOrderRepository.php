@@ -398,6 +398,59 @@ final class WorkOrderRepository extends Repository
         );
     }
 
+    // --- Opérations du préventif ------------------------------------------
+
+    /** Opérations d'un OT, dans l'ordre du plan. */
+    public function checks(int $workOrderId): array
+    {
+        [$scopeSql, $params] = $this->scope->clause('w.site_id');
+
+        return $this->db->fetchAll(
+            "SELECT c.id, c.position, c.label, c.status, c.note, c.checked_at, CONCAT(u.first_name, ' ', u.last_name) AS checked_by_name
+               FROM work_order_checks c
+               JOIN work_orders w ON w.id = c.work_order_id
+               LEFT JOIN users u ON u.id = c.checked_by
+              WHERE c.work_order_id = :wo AND $scopeSql
+              ORDER BY c.position, c.id",
+            ['wo' => $workOrderId] + $params
+        );
+    }
+
+    /** @param list<string> $labels */
+    public function addChecks(int $workOrderId, array $labels): void
+    {
+        foreach (array_values($labels) as $i => $label) {
+            $this->db->execute(
+                'INSERT INTO work_order_checks (work_order_id, position, label) VALUES (:wo, :pos, :label)',
+                ['wo' => $workOrderId, 'pos' => $i + 1, 'label' => $label]
+            );
+        }
+    }
+
+    public function findCheck(int $workOrderId, int $checkId): ?array
+    {
+        return $this->db->fetchOne(
+            'SELECT * FROM work_order_checks WHERE id = :id AND work_order_id = :wo',
+            ['id' => $checkId, 'wo' => $workOrderId]
+        );
+    }
+
+    public function updateCheck(int $checkId, string $status, ?string $note, ?int $userId): void
+    {
+        $this->db->execute(
+            'UPDATE work_order_checks SET status = :s, note = :n, checked_by = :u, checked_at = NOW() WHERE id = :id',
+            ['s' => $status, 'n' => $note, 'u' => $userId, 'id' => $checkId]
+        );
+    }
+
+    public function pendingChecks(int $workOrderId): int
+    {
+        return (int) $this->db->fetchValue(
+            "SELECT COUNT(*) FROM work_order_checks WHERE work_order_id = :wo AND status = 'todo'",
+            ['wo' => $workOrderId]
+        );
+    }
+
     // --- Indicateurs -------------------------------------------------------
 
     /** @return array{open: int, overdue: int, critical: int, done_30d: int, mttr_hours: ?float} */

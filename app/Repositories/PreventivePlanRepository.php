@@ -150,10 +150,10 @@ final class PreventivePlanRepository extends Repository
         $this->scope->assertAllows((int) $data['site_id']);
 
         return $this->db->insert(
-            'INSERT INTO preventive_plans (site_id, equipment_id, title, instructions, interval_days, interval_hours,
+            'INSERT INTO preventive_plans (site_id, equipment_id, title, instructions, checklist, interval_days, interval_hours,
                                            interval_km, last_done_at, last_done_hours, last_done_km, next_due_date,
                                            next_due_hours, next_due_km, is_active)
-             VALUES (:site_id, :equipment_id, :title, :instructions, :interval_days, :interval_hours,
+             VALUES (:site_id, :equipment_id, :title, :instructions, :checklist, :interval_days, :interval_hours,
                      :interval_km, :last_done_at, :last_done_hours, :last_done_km, :next_due_date,
                      :next_due_hours, :next_due_km, :is_active)',
             self::params($data)
@@ -166,7 +166,7 @@ final class PreventivePlanRepository extends Repository
         [$scopeSql, $params] = $this->scope->clause('site_id');
         $this->db->execute(
             "UPDATE preventive_plans SET site_id = :site_id, equipment_id = :equipment_id, title = :title,
-                    instructions = :instructions, interval_days = :interval_days, interval_hours = :interval_hours,
+                    instructions = :instructions, checklist = :checklist, interval_days = :interval_days, interval_hours = :interval_hours,
                     interval_km = :interval_km, last_done_at = :last_done_at, last_done_hours = :last_done_hours,
                     last_done_km = :last_done_km, next_due_date = :next_due_date, next_due_hours = :next_due_hours,
                     next_due_km = :next_due_km, is_active = :is_active
@@ -207,6 +207,7 @@ final class PreventivePlanRepository extends Repository
             'equipment_id' => (int) $data['equipment_id'],
             'title' => $data['title'],
             'instructions' => $data['instructions'] ?? null,
+            'checklist' => $data['checklist'] ?? null,
             'interval_days' => $data['interval_days'] ?? null,
             'interval_hours' => $data['interval_hours'] ?? null,
             'interval_km' => $data['interval_km'] ?? null,

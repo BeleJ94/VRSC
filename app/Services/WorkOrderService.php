@@ -84,7 +84,7 @@ final class WorkOrderService
         return $this->db->transaction(function () use ($plan): int {
             $equipment = $this->equipment->findForUpdate((int) $plan['equipment_id']) ?? throw HttpException::notFound();
 
-            return $this->insert($equipment, [
+            $id = $this->insert($equipment, [
                 'site_id' => (int) $equipment['site_id'],
                 'preventive_plan_id' => (int) $plan['id'],
                 'type' => 'preventive',
@@ -95,6 +95,44 @@ final class WorkOrderService
                 'assigned_to' => null,
                 'due_date' => $plan['next_due_date'] ?? date('Y-m-d'),
             ]);
+            // Opérations du plan copiées dans l'OT : la fiche garde la liste du jour même si le plan change ensuite.
+            $this->workOrders->addChecks($id, self::checklistLines($plan['checklist'] ?? null));
+
+            return $id;
+        });
+    }
+
+    /** Une opération par ligne (puces et numéros retirés), 50 au plus, 255 caractères chacune. */
+    public static function checklistLines(?string $text): array
+    {
+        $lines = [];
+        foreach (preg_split('/\R/u', (string) $text) ?: [] as $line) {
+            $line = trim((string) preg_replace('/^\s*(?:[-*•·]|\d+[.)])\s*/u', '', $line));
+            if ($line !== '') {
+                $lines[] = mb_substr($line, 0, 255);
+            }
+        }
+
+        return array_slice($lines, 0, 50);
+    }
+
+    /** Valide une opération du préventif : OK, anomalie (observation obligatoire) ou sans objet. */
+    public function setCheck(int $id, int $checkId, array $input): void
+    {
+        $data = Validator::validate($input, ['status' => 'required|in:ok,nok,na', 'note' => 'string|max:255']);
+        if ($data['status'] === 'nok' && $data['note'] === null) {
+            throw Validator::fail('note', 'check_note_required');
+        }
+        $this->db->transaction(function () use ($id, $checkId, $data): void {
+            $wo = $this->workOrders->findForUpdate($id) ?? throw HttpException::notFound();
+            $this->assertCanExecute($wo);
+            if (WorkOrderStatus::from($wo['status'])->isClosed()) {
+                throw Validator::fail('status', 'transition');
+            }
+            $check = $this->workOrders->findCheck($id, $checkId) ?? throw HttpException::notFound();
+            $this->workOrders->updateCheck($checkId, $data['status'], $data['note'], $this->auth->user()?->id);
+            $this->logger->log('check', 'work_order', $id, (int) $wo['site_id'], ['status' => $check['status']],
+                ['operation' => $check['label'], 'status' => $data['status'], 'note' => $data['note']], $wo['reference']);
         });
     }
 
@@ -180,6 +218,9 @@ final class WorkOrderService
             $from = WorkOrderStatus::from($wo['status']);
             if (!$from->canTransitionTo($target)) {
                 throw Validator::fail('status', 'transition');
+            }
+            if ($target === WorkOrderStatus::Done && ($pending = $this->workOrders->pendingChecks($id)) > 0) {
+                throw Validator::fail('status', 'checklist_incomplete', ['count' => $pending]);
             }
 
             $now = date('Y-m-d H:i:s');
