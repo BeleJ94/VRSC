@@ -2451,4 +2451,7 @@ return [
     'dashboard.open_cash_journal' => 'Ouvrir le journal de caisse',
     'dashboard.balance' => 'Solde',
     'dashboard.open_days' => 'Arrêtés',
+    'nav.user_menu' => 'Mon compte',
+    'nav.shortcuts' => 'Raccourcis',
+    'nav.breadcrumb' => 'Fil d\'Ariane',
 ];

@@ -31,7 +31,7 @@ final class NavigationHttpTest extends DatabaseTestCase
     {
         $response = $this->http($this->session($userId), 'GET', $path);
         self::assertSame(200, $response->status, $path);
-        self::assertSame(1, preg_match('#<aside class="sidebar".*?</aside>#s', $response->body, $m), $path);
+        self::assertSame(1, preg_match('#<header class="appbar".*?</header>#s', $response->body, $m), $path);
 
         return $m[0];
     }
@@ -39,7 +39,7 @@ final class NavigationHttpTest extends DatabaseTestCase
     /** @return list<string> titres de section dans l'ordre d'affichage */
     private function sectionsOf(string $sidebar): array
     {
-        preg_match_all('#<li class="nav__section"><span class="nav__text">([^<]+)</span>#', $sidebar, $m);
+        preg_match_all('#<span class="appnav__label">([^<]+)</span>#', $sidebar, $m);
 
         return array_map('html_entity_decode', $m[1]);
     }
@@ -112,7 +112,7 @@ final class NavigationHttpTest extends DatabaseTestCase
     public function testNewButtonOffersOnlyAllowedEntries(): void
     {
         $requester = $this->sidebar($this->createUser('requester', [$this->site]), '/edb');
-        self::assertStringContainsString('sidebar__new', $requester);
+        self::assertStringContainsString('appbar__new', $requester);
         self::assertStringContainsString('/edb/create', $requester);
         self::assertStringContainsString('/finance/payments/create', $requester);
         self::assertStringNotContainsString('/work-orders/create', $requester);
@@ -124,7 +124,7 @@ final class NavigationHttpTest extends DatabaseTestCase
         self::assertStringNotContainsString('/finance/payments/create', $technician);
 
         // Un lecteur ne saisit rien : pas de bouton.
-        self::assertStringNotContainsString('sidebar__new', $this->sidebar($this->createUser('viewer', [$this->site]), '/equipment'));
+        self::assertStringNotContainsString('appbar__new', $this->sidebar($this->createUser('viewer', [$this->site]), '/equipment'));
     }
 
     /** Insère une ligne en ne renseignant que l'utile : les colonnes obligatoires sans défaut reçoivent une valeur neutre. */

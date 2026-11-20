@@ -55,7 +55,7 @@ final class MeterEntryTest extends DatabaseTestCase
         self::assertSame(200, $page->status);
         self::assertStringContainsString('KAM-01', $page->body);
         self::assertStringNotContainsString('MET-01', $page->body, 'Engins de ses sites uniquement');
-        self::assertStringNotContainsString('id="sidebar"', $page->body, 'Pas de menu');
+        self::assertStringNotContainsString('id="appnav"', $page->body, 'Pas de menu');
 
         foreach (['/', '/equipment', '/meters', '/work-orders', '/settings/mail'] as $path) {
             self::assertSame(403, $this->http($this->session, 'GET', $path)->status, $path);

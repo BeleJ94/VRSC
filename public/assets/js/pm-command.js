@@ -12,7 +12,7 @@
   var url = $open.data('url');
 
   // Pages du menu, lues dans la barre latérale (respecte les droits de l'utilisateur).
-  var pages = $('#sidebar .nav a[href]').map(function () {
+  var pages = $('#appnav .nav a[href]').map(function () {
     return { label: $(this).find('.nav__text').text().trim() || this.title, url: this.getAttribute('href'), icon: $(this).find('[data-lucide]').attr('data-lucide') || 'arrow-right' };
   }).get().filter(function (p) { return p.label; });
 

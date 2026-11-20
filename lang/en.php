@@ -2431,4 +2431,7 @@ return [
     'dashboard.open_cash_journal' => 'Open the cash journal',
     'dashboard.balance' => 'Balance',
     'dashboard.open_days' => 'Daily closings',
+    'nav.user_menu' => 'My account',
+    'nav.shortcuts' => 'Shortcuts',
+    'nav.breadcrumb' => 'Breadcrumb',
 ];

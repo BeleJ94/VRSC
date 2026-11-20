@@ -93,7 +93,7 @@ final class ClosingsHttpTest extends DatabaseTestCase
         foreach (['class="tabs"', '/saisie', '/readings', '/meters/screen'] as $needle) {
             self::assertStringContainsString($needle, $meters, $needle);
         }
-        preg_match('#<aside class="sidebar".*?</aside>#s', $meters, $m);
+        preg_match('#<header class="appbar".*?</header>#s', $meters, $m);
         self::assertStringNotContainsString('/meters/screen', $m[0], 'Écran mural retiré du menu');
         self::assertStringNotContainsString('>Répertoire des index<', $m[0], 'Répertoire retiré de l\'administration');
         self::assertStringNotContainsString('>Saisie des index<', $m[0]);
@@ -108,7 +108,7 @@ final class ClosingsHttpTest extends DatabaseTestCase
         self::assertStringNotContainsString('/readings', $tabs[0]);
         // L'encodeur, sans supervision, garde son lien direct vers la saisie.
         $encoder = $this->http($this->session('encoder', [$this->site]), 'GET', '/fuel/create')->body;
-        preg_match('#<aside class="sidebar".*?</aside>#s', $encoder, $m);
+        preg_match('#<header class="appbar".*?</header>#s', $encoder, $m);
         self::assertStringContainsString('>Saisie des index<', $m[0]);
     }
 }

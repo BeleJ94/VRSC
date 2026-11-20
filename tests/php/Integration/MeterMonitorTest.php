@@ -156,7 +156,7 @@ final class MeterMonitorTest extends DatabaseTestCase
         $screen = $this->http($session, 'GET', '/meters/screen?rotate=sites');
         self::assertSame(200, $screen->status);
         self::assertStringContainsString('"rotate":true', $screen->body);
-        self::assertStringNotContainsString('id="sidebar"', $screen->body, 'Affichage mural sans navigation');
+        self::assertStringNotContainsString('id="appnav"', $screen->body, 'Affichage mural sans navigation');
         self::assertStringContainsString('"rotate":false', $this->http($session, 'GET', "/meters/screen?rotate=sites&site_id={$this->kamao}")->body, 'Un seul site : pas de rotation');
 
         $data = json_decode($this->http($session, 'GET', '/meters/data', [], $ajax)->body, true);

@@ -58,23 +58,61 @@
       .then(function () { return window.pdfMake; });
   }
 
-  // ---------------------------------------------------------------- Navigation
+  // ---------------------------------------------------------------- Navigation horizontale : sections à menu déroulant
+  // Ouverture au clic (fiable au toucher), une seule section ouverte, fermeture au clic extérieur et par Échap ;
+  // flèches gauche / droite entre sections, flèche bas vers le premier lien.
+  function closeNavPanels(except) {
+    $('[data-nav-trigger]').not(except || []).attr('aria-expanded', 'false').next('.appnav__panel').prop('hidden', true);
+  }
+  $(document).on('click', '[data-nav-trigger]', function (e) {
+    e.stopPropagation();
+    var open = this.getAttribute('aria-expanded') !== 'true';
+    closeNavPanels(this);
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+    $(this).next('.appnav__panel').prop('hidden', !open);
+  });
+  $(document).on('click', function (e) {
+    if (!$(e.target).closest('.appnav__panel').length) closeNavPanels();
+  });
+  $(document).on('keydown', '[data-nav-trigger]', function (e) {
+    var triggers = $('[data-nav-trigger]').toArray();
+    var i = triggers.indexOf(this);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      var next = triggers[(i + (e.key === 'ArrowRight' ? 1 : -1) + triggers.length) % triggers.length];
+      next.focus();
+      if (this.getAttribute('aria-expanded') === 'true') $(next).trigger('click');
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (this.getAttribute('aria-expanded') !== 'true') $(this).trigger('click');
+      $(this).next('.appnav__panel').find('a').first().trigger('focus');
+    }
+  });
+  $(document).on('keydown', '.appnav__panel', function (e) {
+    var links = $(this).find('a').toArray();
+    var i = links.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      links[(i + (e.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length].focus();
+    } else if (e.key === 'Escape') {
+      var trigger = $(this).prev('[data-nav-trigger]')[0];
+      closeNavPanels();
+      if (trigger) trigger.focus();
+    }
+  });
+  $(document).on('keydown', function (e) { if (e.key === 'Escape') closeNavPanels(); });
+
+  // ---------------------------------------------------------------- Navigation (mobile : ouverture du panneau des sections)
   $(document).on('click', '[data-toggle-sidebar]', function () {
-    var open = $('#sidebar').toggleClass('is-open').hasClass('is-open');
+    var open = $('#appnav').toggleClass('is-open').hasClass('is-open');
     $(this).attr('aria-expanded', open ? 'true' : 'false');
   });
   $(document).on('keydown', function (e) {
-    if (e.key === 'Escape') $('#sidebar').removeClass('is-open');
+    if (e.key === 'Escape') $('#appnav').removeClass('is-open');
   });
 
-  // Menu réductible en icônes (mémorisé sur ce poste)
-  function setMini(on) {
-    document.body.classList.toggle('sidebar-mini', on);
-    $('[data-sidebar-mini]').attr('aria-pressed', on ? 'true' : 'false');
-    try { localStorage.setItem('pm.sidebarMini', on ? '1' : '0'); } catch (e) { /* stockage indisponible */ }
-  }
-  try { if (localStorage.getItem('pm.sidebarMini') === '1' && window.innerWidth > 860) setMini(true); } catch (e) { /* ignore */ }
-  $(document).on('click', '[data-sidebar-mini]', function () { setMini(!document.body.classList.contains('sidebar-mini')); });
+  // Ancien menu latéral réductible : réglage mémorisé effacé (la navigation est désormais horizontale).
+  try { localStorage.removeItem('pm.sidebarMini'); } catch (e) { /* stockage indisponible */ }
 
   // Technicien sur téléphone : l'accueil ouvre directement le mode terrain (une fois par session)
   (function () {
