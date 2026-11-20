@@ -126,6 +126,24 @@ final class StockAndPreventiveTest extends DatabaseTestCase
         $orders->setCheck($woId, (int) $checks[0]['id'], ['status' => 'na']);
     }
 
+    public function testPreventivePageListsEquipmentWithoutPlanInScope(): void
+    {
+        $covered = $this->createEquipment($this->site, 'CH-PLAN');
+        $this->createEquipment($this->site, 'VL-SANS');
+        $this->db->execute("UPDATE equipment SET is_archived = 1 WHERE id = :id", ['id' => $this->createEquipment($this->site, 'VL-ARCH')]);
+        $this->createEquipment($this->createSite('AUTRE'), 'VL-AUTRE');
+        $this->service($this->manager, PreventiveService::class)->create(['equipment_id' => (string) $covered, 'title' => 'Révision', 'interval_days' => '30', 'is_active' => '1']);
+
+        $session = \App\Core\Session::memory(['auth_user_id' => $this->manager]);
+        $page = $this->http($session, 'GET', '/preventive')->body;
+        self::assertStringContainsString('1 engin(s) sans plan préventif', $page);
+        self::assertStringContainsString('VL-SANS', $page);
+        self::assertStringContainsString('/preventive/create?equipment_id=', $page);
+        foreach (['CH-PLAN', 'VL-ARCH', 'VL-AUTRE'] as $hidden) {
+            self::assertStringNotContainsString($hidden, $page, "$hidden : couvert, archivé ou hors périmètre");
+        }
+    }
+
     public function testPlanUpdateLogsOnlyChangedFields(): void
     {
         $equipment = $this->createEquipment($this->site, 'CH-04');

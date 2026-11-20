@@ -2625,4 +2625,7 @@ Grease the joints',
     'task_run.failed' => 'Failed',
     'task_run.running' => 'Running',
     'validation.task_failed' => 'The task failed: :error',
+    'preventive.uncovered_title' => ':count equipment without a preventive plan',
+    'preventive.uncovered_hint' => 'Active equipment with no active plan: no alert and no preventive work order will be issued.',
+    'preventive.create_for' => 'Create a plan',
 ];

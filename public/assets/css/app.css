@@ -2088,3 +2088,14 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
 .task-card__dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .task-card__actions { margin-top: auto; padding-top: var(--space-2); }
 .code-block { background: #0F1B2A; color: #E6EDF5; padding: 10px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; white-space: pre; }
+
+/* Préventif : engins sans plan */
+.uncovered { border-left: 3px solid #B54708; padding: 0; }
+.uncovered__head { display: flex; gap: var(--space-3); align-items: center; padding: 12px 16px; cursor: pointer; list-style: none; }
+.uncovered__head::-webkit-details-marker { display: none; }
+.uncovered__head > span:nth-child(2) { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.uncovered__icon { flex: none; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: #FEF0E6; color: #B54708; }
+.uncovered__icon [data-lucide] { width: 17px; height: 17px; }
+.uncovered__chevron { width: 18px; height: 18px; transition: transform .15s; }
+.uncovered[open] .uncovered__chevron { transform: rotate(180deg); }
+.uncovered .table-wrap { padding: 0 16px 12px; }

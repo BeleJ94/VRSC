@@ -127,6 +127,27 @@ final class PreventivePlanRepository extends Repository
         );
     }
 
+    /** Engins actifs (non archivés) sans aucun plan préventif actif : parc non couvert par la maintenance. */
+    public function equipmentWithoutPlan(?int $siteId = null): array
+    {
+        [$scopeSql, $params] = $this->scope->clause('e.site_id');
+        $siteSql = '';
+        if ($siteId !== null) {
+            $siteSql = ' AND e.site_id = :site';
+            $params['site'] = $siteId;
+        }
+
+        return $this->db->fetchAll(
+            "SELECT e.id, e.code, e.name, e.status, s.name AS site
+               FROM equipment e
+               JOIN sites s ON s.id = e.site_id
+              WHERE $scopeSql $siteSql AND e.is_archived = 0
+                AND NOT EXISTS (SELECT 1 FROM preventive_plans p WHERE p.equipment_id = e.id AND p.is_active = 1)
+              ORDER BY s.name, e.code",
+            $params
+        );
+    }
+
     public function countDue(int $horizonDays, ?int $siteId = null): int
     {
         [$scopeSql, $params] = $this->scope->clause('p.site_id');

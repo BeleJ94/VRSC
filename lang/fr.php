@@ -2645,4 +2645,7 @@ Graisser les articulations',
     'task_run.failed' => 'Échec',
     'task_run.running' => 'En cours',
     'validation.task_failed' => 'La tâche a échoué : :error',
+    'preventive.uncovered_title' => ':count engin(s) sans plan préventif',
+    'preventive.uncovered_hint' => 'Engins actifs sans aucun plan actif : ils ne recevront ni alerte ni OT préventif.',
+    'preventive.create_for' => 'Créer un plan',
 ];

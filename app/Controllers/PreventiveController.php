@@ -31,6 +31,7 @@ final class PreventiveController extends Controller
             'title' => t('nav.preventive'),
             'sites' => $this->sites->listActive(),
             'filters' => ['site_id' => $this->siteFilter($request), 'due' => $request->string('due')],
+            'uncovered' => $this->plans->equipmentWithoutPlan($this->siteFilter($request)),
         ]);
     }
 
