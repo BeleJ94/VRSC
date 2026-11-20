@@ -450,7 +450,13 @@
   });
 
   /** Export Excel / PDF de toutes les lignes correspondant aux filtres et au tri courants d'une DataTable. */
-  function exportTable(table, def, source, title, kind, button) {
+  var logoSvg = null;
+  function loadLogo() {
+    if (logoSvg !== null || !config.assets.logo) return $.Deferred().resolve(logoSvg).promise();
+    return $.get(config.assets.logo, null, null, 'text').then(function (svg) { logoSvg = svg; return svg; }, function () { return null; });
+  }
+
+  function exportTable(table, def, source, title, kind, button, context) {
     var params = $.extend(table.ajax.params(), { start: 0, length: -1, draw: 0 });
     button.disabled = true;
 
@@ -461,6 +467,15 @@
         var meta = { subtitle: t('js.export_meta', { count: json.recordsFiltered, date: Core.formatDate(new Date().toISOString().slice(0, 10), locale) }) };
         if (json.recordsFiltered > json.data.length) {
           meta.subtitle += ' — ' + t('js.export_truncated', { count: json.data.length });
+        }
+        if (context) {
+          $.extend(meta, context, { count: json.recordsFiltered, countLabel: t('js.drill.rows'), totalLabel: t('js.drill.total'), confidential: t('js.drill.confidential') });
+          if (kind === 'pdf') {
+            return loadLogo().then(function (svg) {
+              meta.logo = svg;
+              return loadPdfMake().then(function (pdfMake) { Exporter.exportPdf(pdfMake, title, data, meta); });
+            });
+          }
         }
         if (kind === 'excel') {
           return loadScript(config.assets.exceljs).then(function () { return Exporter.exportExcel(window.ExcelJS, title, data, meta); });
@@ -565,13 +580,64 @@
     $root.on('click', '[data-drill-export]', function () {
       var suffix = $root.find('[data-drill-chip][aria-pressed="true"]').text();
       var title = spec.title + (suffix && suffix !== t('js.all') ? ' — ' + suffix : '');
-      exportTable(state.table, def, spec.source, title, this.dataset.drillExport, this);
+      var site = state.site ? $root.find('[data-drill-site] option:selected').text() : '';
+      exportTable(state.table, def, spec.source, title, this.dataset.drillExport, this, {
+        executive: true,
+        filters: [suffix && suffix !== t('js.all') ? suffix : '', site].filter(Boolean).join(' · '),
+        author: config.user ? t('js.drill.by', { name: config.user }) : ''
+      });
     });
   }
 
   window.PM.drill = openDrill;
+
+  // ---------------------------------------------------------------- Fiche compacte d'un élément unique
+  // Spécification : { title, subtitle, icon, fields: [[libellé, valeur, ton]], url, urlLabel, drill, drillLabel }
+  function openPeek(spec, opener) {
+    var esc = Core.escapeHtml;
+    var rows = (spec.fields || []).map(function (f) {
+      return '<div class="peek__row"><dt>' + esc(f[0]) + '</dt><dd' + (f[2] ? ' class="peek__val--' + esc(f[2]) + '"' : '') + '>' + esc(f[1]) + '</dd></div>';
+    }).join('');
+    var actions = (spec.drill ? '<button type="button" class="btn btn--sm" data-peek-drill><i data-lucide="table-2"></i>' + esc(spec.drillLabel || t('js.drill.detail')) + '</button>' : '')
+      + (spec.url ? '<a class="btn btn--sm btn--primary" href="' + esc(spec.url) + '"><i data-lucide="arrow-up-right"></i>' + esc(spec.urlLabel || t('js.drill.more')) + '</a>' : '');
+    var drillAfter = false;
+    Swal.fire({
+      html: '<div class="peek">'
+        + '<div class="peek__head"><span class="peek__icon"><i data-lucide="' + esc(spec.icon || 'info') + '"></i></span>'
+        + '<div><h3>' + esc(spec.title) + '</h3>' + (spec.subtitle ? '<span class="peek__sub">' + esc(spec.subtitle) + '</span>' : '') + '</div></div>'
+        + '<dl class="peek__grid">' + rows + '</dl>'
+        + (actions ? '<div class="peek__actions">' + actions + '</div>' : '') + '</div>',
+      showConfirmButton: false,
+      showCloseButton: true,
+      width: 460,
+      padding: '18px',
+      customClass: { popup: 'peek-popup' },
+      didOpen: function (popup) {
+        icons();
+        $(popup).on('click', '[data-peek-drill]', function () { drillAfter = true; Swal.close(); });
+      },
+      // Le tableau s'ouvre une fois la fiche fermée (sinon Échap serait ignoré pendant l'animation).
+      didClose: function () {
+        if (drillAfter) openDrill(spec.drill, opener);
+        else if (opener && opener.focus) opener.focus();
+      }
+    });
+  }
+  window.PM.peek = openPeek;
+  $(document).on('click', '[data-peek]', function (e) {
+    if ($(e.target).closest('a[href]:not([data-peek]), [data-drill]').length) return;
+    e.preventDefault();
+    var spec;
+    try { spec = JSON.parse(this.dataset.peek); } catch (err) { return; }
+    openPeek(spec, this);
+  });
+  // Éléments cliquables non natifs (cartes, lignes, points) : activation au clavier.
+  $(document).on('keydown', '[role="button"][data-drill], [role="button"][data-peek]', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); $(this).trigger('click'); }
+  });
   $(document).on('click', '[data-drill]', function (e) {
     e.preventDefault();
+    e.stopPropagation();
     var spec;
     try { spec = JSON.parse(this.dataset.drill); } catch (err) { return; }
     openDrill(spec, this);

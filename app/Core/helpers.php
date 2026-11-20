@@ -205,16 +205,36 @@ function format_qty(mixed $value): string
  */
 function drill(string $table, string $source, string $title, array $params = [], ?string $page = null, ?string $row = null, array $chips = []): string
 {
+    return ' data-drill="' . e(json_encode(drill_spec($table, $source, $title, $params, $page, $row, $chips), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"';
+}
+
+/**
+ * Spécification d'une fenêtre de détail (tableau). $row « {!link} » = lien de ligne fourni par le serveur.
+ * $page reçoit les filtres seulement si elle les comprend ($pageParams = false pour une page sans ces filtres).
+ */
+function drill_spec(string $table, string $source, string $title, array $params = [], ?string $page = null, ?string $row = null, array $chips = [], bool $pageParams = true): array
+{
     $params = array_filter($params, static fn ($v) => $v !== null && $v !== '');
-    $spec = [
+
+    return [
         'table' => $table,
         'source' => url($source),
         'title' => $title,
         'params' => $params,
-        'page' => $page !== null ? url($page, $params) : null,
-        'row' => $row !== null ? url($row) : null,
+        'page' => $page !== null ? url($page, $pageParams ? $params : []) : null,
+        'row' => $row !== null ? (str_starts_with($row, '{!') ? $row : url($row)) : null,
         'chips' => $chips,
     ];
+}
 
-    return ' data-drill="' . e(json_encode($spec, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"';
+/**
+ * Fiche compacte d'un élément unique : chiffres clés, lien « Voir plus », détail éventuel en tableau.
+ * @param list<array{0: string, 1: string, 2?: string}> $fields [libellé, valeur, ton good|warn|bad]
+ */
+function peek(string $title, ?string $subtitle, string $icon, array $fields, ?string $url = null, ?string $urlLabel = null, ?array $drill = null, ?string $drillLabel = null): string
+{
+    $spec = ['title' => $title, 'subtitle' => $subtitle, 'icon' => $icon, 'fields' => $fields, 'url' => $url !== null ? url($url) : null,
+        'urlLabel' => $urlLabel ?? t('dashboard.see_more'), 'drill' => $drill, 'drillLabel' => $drillLabel];
+
+    return ' data-peek="' . e(json_encode($spec, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"';
 }

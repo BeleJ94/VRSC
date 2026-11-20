@@ -9,7 +9,9 @@ $pmConfig = [
         'exceljs' => asset('vendor/exceljs.min.js'),
         'pdfmake' => asset('vendor/pdfmake.min.js'),
         'vfs' => asset('vendor/vfs_fonts.js'),
+        'logo' => asset('img/logo-vrsc.svg'),
     ],
+    'user' => isset($currentUser) ? $currentUser->name() : null,
 ];
 ?>
 <script type="application/json" id="pm-config"><?= json_for_html($pmConfig) ?></script>

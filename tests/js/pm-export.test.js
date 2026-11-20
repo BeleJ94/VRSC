@@ -145,3 +145,63 @@ test('Excel : colonnes numériques et dates exportées en valeurs natives format
   assert.equal(reported.v.toISOString(), '2026-09-24T08:30:00.000Z');
   assert.equal(reported.fmt, 'dd/mm/yyyy');
 });
+
+test('export exécutif : bandeau, cartes de synthèse, ligne de total, dates à gauche', () => {
+  const defs = Tables.definitions(t, 'fr');
+  const rows = [
+    { reference: 'DD-1', date: '2026-11-17 10:00:00', site: 'Kolwezi', party: 'Katanga Diesel', kind: 'invoice', category: 'fuel', status: 'paid', amount: '1200.50' },
+    { reference: 'DD-2', date: '2026-11-18 09:00:00', site: 'Likasi', party: 'Hôtel', kind: 'expense', category: 'other', status: 'paid', amount: '99.50' }
+  ];
+  const data = Exporter.tableData(defs.drill_payments.columns, rows, 'fr');
+  assert.equal(data.totals[6], 1300);
+  assert.match(data.totalsText[6], /1\s300,00/);
+  const doc = Exporter.executiveDocDefinition('Dépenses payées', data, { executive: true, logo: '<svg/>', filters: 'Kolwezi', author: 'Édité par X', count: 2 });
+  assert.equal(doc.pageOrientation, 'landscape');
+  assert.equal(doc.content[0].columns[0].svg, '<svg/>', 'Logo VRSC en tête');
+  const flat = JSON.stringify(doc.content);
+  assert.match(flat, /Kolwezi/);
+  assert.match(flat, /Édité par X/);
+  const table = doc.content[3].table;
+  assert.equal(table.body.length, 4, 'En-tête + 2 lignes + total');
+  assert.equal(table.body[3][0].text, 'Total');
+  assert.match(table.body[3][6].text, /1\s300,00/);
+  assert.equal(table.body[1][1].alignment, 'left', 'Date alignée à gauche');
+  assert.equal(table.body[1][6].alignment, 'right', 'Montant aligné à droite');
+  assert.match(doc.footer(1, 3).columns[0].text, /Document interne/);
+  assert.equal(Exporter.pdfSafe({ svg: 'a b' }).svg, 'a b', 'Logo SVG non retouché');
+});
+
+test('classeur exécutif : titre, contexte, en-tête figé en ligne 4, total en formule', () => {
+  class Sheet {
+    constructor() { this.rows = []; this.columnsList = []; this.merged = []; }
+    addRow(values) {
+      const row = { values, cells: {}, getCell(n) { return (this.cells[n] = this.cells[n] || {}); } };
+      this.rows.push(row);
+      (values || []).forEach((_, i) => { this.columnsList[i] = this.columnsList[i] || { width: undefined }; });
+      return row;
+    }
+    getRow(n) { return this.rows[n - 1]; }
+    mergeCells(...a) { this.merged.push(a); }
+    get columns() { return this.columnsList; }
+  }
+  class Workbook { constructor() { this.sheets = []; } addWorksheet(name, opts) { const s = new Sheet(); s.opts = opts; this.sheets.push(s); return s; } }
+  const defs = Tables.definitions(t, 'fr');
+  const rows = [{ reference: 'DD-1', date: '2026-11-17', site: 'K', party: 'P', kind: 'expense', category: 'fuel', status: 'paid', amount: '10' },
+    { reference: 'DD-2', date: '2026-11-18', site: 'K', party: 'P', kind: 'expense', category: 'fuel', status: 'paid', amount: '5' }];
+  const data = Exporter.tableData(defs.drill_payments.columns, rows, 'fr');
+  const sheet = Exporter.buildExecutiveWorkbook({ Workbook }, 'Dépenses payées', data, { filters: 'Kolwezi', subtitle: '2 lignes', totalLabel: 'Total' }).sheets[0];
+  assert.match(sheet.rows[0].values[0], /^VRSC — Dépenses payées/);
+  assert.match(sheet.rows[1].values[0], /Kolwezi · 2 lignes/);
+  assert.equal(sheet.opts.views[0].ySplit, 4);
+  assert.deepEqual(sheet.autoFilter.from, { row: 4, column: 1 });
+  const total = sheet.rows[sheet.rows.length - 1].values;
+  assert.equal(total[0], 'Total');
+  assert.deepEqual(total[6], { formula: 'SUBTOTAL(9,G5:G6)', result: 15 });
+});
+
+test('lien de ligne fourni par le serveur : {!clé} conservé tel quel, jamais une autre origine', () => {
+  assert.equal(Core.fillUrl('{!link}', { link: '/ETHAN%20VRSC/purchases/12' }), '/ETHAN%20VRSC/purchases/12');
+  assert.equal(Core.fillUrl('{!link}', { link: '//evil.example/x' }), '#');
+  assert.equal(Core.fillUrl('{!link}', { link: 'javascript:alert(1)' }), '#');
+  assert.equal(Core.fillUrl('/x/{id}', { id: 'a/b' }), '/x/a%2Fb');
+});

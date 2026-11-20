@@ -70,8 +70,10 @@ final class NotificationService
             $spec('equipment', '/equipment/data', t('site.contracts_ending'), ['contract_days' => '30'], '/equipment', '/equipment/{id}'));
         $documents = $this->documents->expiring();
         $expired = count(array_filter($documents, static fn (array $d) => (int) $d['days_left'] < 0));
-        $add('documents_expired', 'bad', 'file-x', $expired, null, url('/alerts') . '#documents');
-        $add('documents_soon', 'warn', 'file-clock', count($documents) - $expired, null, url('/alerts') . '#documents');
+        $add('documents_expired', 'bad', 'file-x', $expired,
+            $spec('documents', '/documents/data', t('doc_state_title.expired'), ['state' => 'expired'], '/documents', '/equipment/{equipment_id}'));
+        $add('documents_soon', 'warn', 'file-clock', count($documents) - $expired,
+            $spec('documents', '/documents/data', t('doc_state_title.soon'), ['state' => 'soon'], '/documents', '/equipment/{equipment_id}'));
         $add('wear', 'info', 'trending-down', count($this->alerts->prematureWear()), null, url('/alerts') . '#wear');
         $add('overuse', 'info', 'droplets', count($this->alerts->lubricantOveruse()), null, url('/alerts') . '#overuse');
 

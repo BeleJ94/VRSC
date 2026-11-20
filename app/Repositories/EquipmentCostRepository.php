@@ -44,6 +44,12 @@ final class EquipmentCostRepository extends Repository
     public const FUEL_TOLERANCE = 0.20;
 
     /** Toutes les lignes de coût, une par pièce source. */
+    /** Lignes de coût (requête dérivée), pour les listes de détail des tableaux de bord. */
+    public function linesSource(): string
+    {
+        return $this->lines();
+    }
+
     private function lines(): string
     {
         return "(

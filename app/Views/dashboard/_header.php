@@ -6,6 +6,12 @@
 $viewIcons = ['executive' => 'presentation', 'finance' => 'landmark', 'maintenance' => 'wrench'];
 $viewLabels = ['executive' => 'dashboard.view_executive', 'finance' => 'dashboard.view_finance', 'maintenance' => 'dashboard.view_maintenance'];
 $periodLabels = ['month' => 'dashboard.period_month', 'last_month' => 'dashboard.period_last_month', 'quarter' => 'dashboard.period_quarter', 'year' => 'dashboard.period_year'];
+$sq = ($siteId ?? null) !== null ? ['site_id' => $siteId] : [];
+$todoDrills = [
+    'payments' => drill_spec('drill_payments', '/dashboard/drill/payments', t('dashboard.todo_payments_title'), ['status' => 'approved'] + $sq, '/finance/payments', '{!link}', [], false),
+    'edb' => drill_spec('purchase_requests', '/edb/data', t('dashboard.todo_edb_title'), ['status' => 'approved'] + $sq, '/edb', '/edb/{id}'),
+    'documents' => drill_spec('documents', '/documents/data', t('dashboard.alert_documents_title'), ['state' => 'expired'] + $sq, '/documents', '/equipment/{equipment_id}'),
+];
 $todoLabels = [
     'approvals' => 'dashboard.todo_approvals', 'payments' => 'dashboard.todo_payments', 'edb' => 'dashboard.todo_edb', 'stock_transfers' => 'dashboard.todo_stock_transfers',
     'fleet_transfers' => 'dashboard.todo_fleet_transfers', 'closings' => 'dashboard.todo_closings', 'cash_days' => 'dashboard.todo_cash_days', 'documents' => 'dashboard.todo_documents',
@@ -49,7 +55,7 @@ $todoLabels = [
     <section class="xdash-todo" aria-label="<?= e(t('dashboard.todo')) ?>">
         <span class="xdash-todo__title"><i data-lucide="list-checks"></i><?= e(t('dashboard.todo')) ?></span>
         <?php foreach ($todo as $item): ?>
-            <a class="xdash-todo__item xdash-todo__item--<?= e($item['level']) ?>" href="<?= e(url($item['url'])) ?>">
+            <a class="xdash-todo__item xdash-todo__item--<?= e($item['level']) ?>" href="<?= e(url($item['url'])) ?>"<?= isset($todoDrills[$item['key']]) ? ' data-drill="' . e(json_encode($todoDrills[$item['key']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"' : '' ?>>
                 <i data-lucide="<?= e($item['icon']) ?>"></i><strong><?= e($item['count']) ?></strong><span><?= e(t($todoLabels[$item['key']])) ?></span>
             </a>
         <?php endforeach; ?>

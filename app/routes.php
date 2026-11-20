@@ -151,6 +151,12 @@ return static function (Router $r): void {
     $r->get('/stock/periods', [StockController::class, 'periods'], ['permission' => 'stock.view']);
     $r->post('/stock/periods', [StockController::class, 'closePeriod'], ['permission' => 'stock.close']);
     $r->get('/closings', [\App\Controllers\ClosingController::class, 'index'], ['permission' => 'closings.view']);
+    // Listes de détail des tableaux de bord
+    $r->get('/dashboard/drill/payments', [\App\Controllers\DashboardDrillController::class, 'payments'], ['permission' => 'finance.view']);
+    $r->get('/dashboard/drill/invoices', [\App\Controllers\DashboardDrillController::class, 'invoices'], ['permission' => 'finance.view']);
+    $r->get('/dashboard/drill/commitments', [\App\Controllers\DashboardDrillController::class, 'commitments'], ['permission' => 'finance.view']);
+    $r->get('/dashboard/drill/cost-lines', [\App\Controllers\DashboardDrillController::class, 'costLines'], ['permission' => 'costs.view']);
+    $r->get('/dashboard/drill/stock-values', [\App\Controllers\DashboardDrillController::class, 'stockValues'], ['permission' => 'stock.view']);
     $r->get('/stock/transfers', [StockTransferController::class, 'index'], ['permission' => 'stock.view']);
     $r->get('/stock/transfers/create', [StockTransferController::class, 'create'], ['permission' => 'stock.transfer']);
     $r->post('/stock/transfers', [StockTransferController::class, 'store'], ['permission' => 'stock.transfer']);

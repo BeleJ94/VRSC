@@ -412,6 +412,95 @@
         ]
       },
 
+      // Fenêtres de détail des tableaux de bord (lien de ligne fourni par le serveur : {!link})
+      drill_payments: {
+        order: [[1, 'desc']],
+        columns: [
+          { data: 'reference', title: t('js.drill.reference'), html: function (r) { return '<strong>' + esc(r.reference) + '</strong>'; } },
+          { data: 'date', title: t('js.date'), className: 'nowrap', text: function (r) { return date(r.date); } },
+          { data: 'site', title: t('fields.site_id') },
+          { data: 'party', title: t('js.drill.beneficiary'), html: function (r) {
+            return esc(r.party) + '<br><span class="muted">' + esc(t('payment_kind.' + r.kind)) + '</span>';
+          }, text: function (r) { return r.party + ' – ' + t('payment_kind.' + r.kind); } },
+          { data: 'category', title: t('js.drill.category'), text: function (r) { return r.category ? t('finance_category.' + r.category) : ''; } },
+          { data: 'status', title: t('fields.status'), html: function (r) {
+            var cls = { paid: 'available', approved: 'waiting_part', pending: 'maintenance', rejected: 'breakdown' }[r.status] || 'neutral';
+            return '<span class="badge badge--' + cls + '">' + esc(t('payment_status.' + r.status)) + '</span>';
+          }, text: function (r) { return t('payment_status.' + r.status); } },
+          { data: 'amount', title: t('js.drill.amount'), className: 'dt-right', html: function (r) { return '<strong>' + esc(Core.formatMoney(r.amount, locale)) + '</strong>'; },
+            text: function (r) { return Core.formatMoney(r.amount, locale); } }
+        ]
+      },
+
+      drill_invoices: {
+        order: [[1, 'desc']],
+        columns: [
+          { data: 'reference', title: t('js.drill.invoice'), html: function (r) { return '<strong>' + esc(r.reference) + '</strong>'; } },
+          { data: 'date', title: t('js.date'), className: 'nowrap', text: function (r) { return date(r.date); } },
+          { data: 'due_date', title: t('js.drill.due'), className: 'nowrap', html: function (r) {
+            var late = r.due_date && Number(r.unpaid) > 0.005 && r.due_date < new Date().toISOString().slice(0, 10);
+            return late ? '<span class="badge badge--breakdown">' + esc(date(r.due_date)) + '</span>' : esc(date(r.due_date));
+          }, text: function (r) { return date(r.due_date); } },
+          { data: 'party', title: t('js.drill.supplier') },
+          { data: 'site', title: t('fields.site_id') },
+          { data: 'amount', title: t('js.drill.amount'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.amount, locale); } },
+          { data: 'paid', title: t('js.drill.paid'), className: 'dt-right', text: function (r) { return Core.formatMoney(r.paid, locale); } },
+          { data: 'unpaid', title: t('js.drill.unpaid'), className: 'dt-right', html: function (r) {
+            return Number(r.unpaid) > 0.005 ? '<strong>' + esc(Core.formatMoney(r.unpaid, locale)) + '</strong>' : '<span class="muted">' + esc(Core.formatMoney(0, locale)) + '</span>';
+          }, text: function (r) { return Core.formatMoney(r.unpaid, locale); } }
+        ]
+      },
+
+      drill_commitments: {
+        order: [[1, 'desc']],
+        columns: [
+          { data: 'reference', title: t('js.drill.reference'), html: function (r) { return '<strong>' + esc(r.reference) + '</strong>'; } },
+          { data: 'date', title: t('js.date'), className: 'nowrap', text: function (r) { return date(r.date); } },
+          { data: 'kind', title: t('js.drill.kind'), text: function (r) { return r.kind === 'order' ? t('js.drill.order') : t('payment_kind.' + r.kind); } },
+          { data: 'party', title: t('js.drill.party') },
+          { data: 'site', title: t('fields.site_id') },
+          { data: 'category', title: t('js.drill.category'), text: function (r) { return r.category ? t('finance_category.' + r.category) : ''; } },
+          { data: 'status', title: t('fields.status'), text: function (r) { return r.kind === 'order' ? t('order_status.' + r.status) : t('payment_status.' + r.status); } },
+          { data: 'amount', title: t('js.drill.amount'), className: 'dt-right', html: function (r) { return '<strong>' + esc(Core.formatMoney(r.amount, locale)) + '</strong>'; },
+            text: function (r) { return Core.formatMoney(r.amount, locale); } }
+        ]
+      },
+
+      drill_cost_lines: {
+        order: [[0, 'desc']],
+        columns: [
+          { data: 'date', title: t('js.date'), className: 'nowrap', text: function (r) { return date(r.date); } },
+          { data: 'equipment', title: t('fields.equipment_id'), html: function (r) {
+            return '<strong>' + esc(r.equipment) + '</strong><br><span class="muted">' + esc(r.site) + '</span>';
+          }, text: function (r) { return r.equipment + ' – ' + r.site; } },
+          { data: 'category', title: t('js.drill.kind'), text: function (r) { return t('cost_kind.' + r.category); } },
+          { data: 'label', title: t('js.drill.label'), html: function (r) {
+            return esc(r.label) + '<br><span class="muted">' + esc(t('cost_source.' + r.kind)) + (r.reference ? ' · ' + esc(r.reference) : '') + '</span>';
+          }, text: function (r) { return r.label + ' – ' + t('cost_source.' + r.kind) + (r.reference ? ' ' + r.reference : ''); } },
+          { data: 'quantity', title: t('fields.quantity'), className: 'dt-right', text: function (r) { return num(r.quantity, 2) + ' ' + (r.unit || ''); } },
+          { data: 'amount', title: t('js.drill.amount'), className: 'dt-right', html: function (r) {
+            return r.amount === null || r.amount === undefined ? missing(t) : '<strong>' + esc(Core.formatMoney(r.amount, locale)) + '</strong>';
+          }, text: function (r) { return r.amount === null || r.amount === undefined ? t('js.stock.value_missing') : Core.formatMoney(r.amount, locale); } }
+        ]
+      },
+
+      drill_stock_values: {
+        order: [[5, 'desc']],
+        columns: [
+          { data: 'reference', title: t('js.drill.item'), html: function (r) {
+            return '<strong>' + esc(r.reference) + '</strong><br><span class="muted">' + esc(r.label) + '</span>';
+          }, text: function (r) { return r.reference + ' – ' + r.label; } },
+          { data: 'site', title: t('fields.site_id') },
+          { data: 'category', title: t('js.drill.category'), text: function (r) { return t('part_type.' + r.category); } },
+          { data: 'quantity', title: t('fields.quantity'), className: 'dt-right', text: function (r) { return num(r.quantity, 2) + ' ' + (r.unit || ''); } },
+          { data: 'avg_cost', title: t('js.drill.avg_cost'), className: 'dt-right', html: function (r) {
+            return r.avg_cost === null || r.avg_cost === undefined ? missing(t) : esc(Core.formatMoney(r.avg_cost, locale));
+          }, text: function (r) { return r.avg_cost === null || r.avg_cost === undefined ? t('js.stock.value_missing') : Core.formatMoney(r.avg_cost, locale); } },
+          { data: 'value', title: t('js.drill.value'), className: 'dt-right', html: function (r) { return '<strong>' + esc(Core.formatMoney(r.value, locale)) + '</strong>'; },
+            text: function (r) { return Core.formatMoney(r.value, locale); } }
+        ]
+      },
+
       // Rapport mensuel des coûts par équipement, du plus coûteux au moins coûteux
       equipment_costs: {
         order: [[9, 'desc']],
@@ -501,6 +590,11 @@
         qty_close: { type: 'qty' }, in_transit: { type: 'qty', blankZero: true } },
       stock_journal: { moved_on: { type: 'date' }, delta: { type: 'qty' } },
       purchase_requests: { requested_at: { type: 'date' } },
+      drill_payments: { date: { type: 'date' }, amount: { type: 'money', total: true } },
+      drill_invoices: { date: { type: 'date' }, due_date: { type: 'date' }, amount: { type: 'money', total: true }, paid: { type: 'money', total: true }, unpaid: { type: 'money', total: true } },
+      drill_commitments: { date: { type: 'date' }, amount: { type: 'money', total: true } },
+      drill_cost_lines: { date: { type: 'date' }, quantity: { type: 'qty' }, amount: { type: 'money', total: true } },
+      drill_stock_values: { quantity: { type: 'qty' }, avg_cost: { type: 'money' }, value: { type: 'money', total: true } },
       purchase_execution: { approved_at: { type: 'date' }, qty_remaining: { type: 'qty' }, age_days: { type: 'int', unit: days } }
     };
     Object.keys(XL).forEach(function (name) {

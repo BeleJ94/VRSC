@@ -26,7 +26,17 @@
       cells: rows.map(function (row) {
         return columns.map(function (c) { return Tables.cellValue(c, row, locale); });
       }),
-      numeric: columns.map(function (c) { return !!c.xl; })
+      numeric: columns.map(function (c) { return !!c.xl; }),
+      types: columns.map(function (c) { return c.xl ? c.xl.type : null; }),
+      totals: columns.map(function (c) {
+        if (!c.xl || !c.xl.total) return null;
+        return rows.reduce(function (sum, row) { var n = Number(row[c.data]); return sum + (isFinite(n) ? n : 0); }, 0);
+      }),
+      totalsText: columns.map(function (c) {
+        if (!c.xl || !c.xl.total) return null;
+        var sum = rows.reduce(function (s, row) { var n = Number(row[c.data]); return s + (isFinite(n) ? n : 0); }, 0);
+        return Core.formatMoney(sum, locale);
+      })
     };
   }
 
@@ -99,6 +109,166 @@
             hLineColor: function () { return '#DDE1E6'; },
             vLineWidth: function () { return 0; },
             fillColor: function (rowIndex) { return rowIndex > 0 && rowIndex % 2 === 0 ? '#F5F6F8' : null; }
+          }
+        }
+      ]
+    };
+  }
+
+  /**
+   * Classeur « exécutif » (fenêtres de détail des tableaux de bord) : titre, contexte (filtres, nombre de lignes,
+   * date, auteur), en-tête figé avec filtre, valeurs natives, ligne de totaux en formules.
+   */
+  function buildExecutiveWorkbook(ExcelJS, title, data, meta) {
+    meta = meta || {};
+    var wb = new ExcelJS.Workbook();
+    wb.creator = 'ETHAN VRSC';
+    wb.created = meta.date || new Date();
+    var cols = Math.max(1, data.headers.length);
+    var sheet = wb.addWorksheet(String(title).slice(0, 31) || 'Export', {
+      views: [{ state: 'frozen', ySplit: 4 }],
+      pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
+    });
+    sheet.addRow(['VRSC — ' + title]);
+    sheet.getRow(1).font = { bold: true, size: 15, color: { argb: 'FF0D5487' } };
+    sheet.getRow(1).height = 24;
+    sheet.addRow([[meta.filters, meta.subtitle, meta.author].filter(Boolean).join(' · ')]);
+    sheet.getRow(2).font = { size: 9, color: { argb: 'FF5B6573' } };
+    sheet.addRow([]);
+    if (sheet.mergeCells) {
+      sheet.mergeCells(1, 1, 1, cols);
+      sheet.mergeCells(2, 1, 2, cols);
+    }
+    var header = sheet.addRow(data.headers);
+    header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D5487' } };
+    header.alignment = { vertical: 'middle', wrapText: true };
+    header.height = 22;
+    data.body.forEach(function (r, i) {
+      var row = sheet.addRow(r.map(function (text, c) {
+        var native = data.cells && data.cells[i][c];
+        return native ? native.v : text;
+      }));
+      (data.cells ? data.cells[i] : []).forEach(function (native, c) {
+        if (!native) return;
+        var cell = row.getCell(c + 1);
+        if (native.fmt) cell.numFmt = native.fmt;
+        cell.alignment = { horizontal: 'right' };
+      });
+      if (i % 2 === 1) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F7FA' } };
+    });
+    var first = 5;
+    var last = 4 + data.body.length;
+    if ((data.totals || []).some(function (v) { return v !== null; }) && data.body.length) {
+      var values = data.headers.map(function (_, c) {
+        if (c === 0) return meta.totalLabel || 'Total';
+        if (data.totals[c] === null) return '';
+        var letter = columnLetter(c + 1);
+        return { formula: 'SUBTOTAL(9,' + letter + first + ':' + letter + last + ')', result: data.totals[c] };
+      });
+      var totals = sheet.addRow(values);
+      totals.font = { bold: true };
+      totals.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF4' } };
+      data.totals.forEach(function (v, c) {
+        if (v === null) return;
+        var cell = totals.getCell(c + 1);
+        var fmt = data.cells && data.cells[0] && data.cells[0][c] ? data.cells[0][c].fmt : null;
+        if (fmt) cell.numFmt = fmt;
+        cell.alignment = { horizontal: 'right' };
+      });
+    }
+    sheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: cols } };
+    sheet.columns.forEach(function (col, i) {
+      var max = String(data.headers[i] || '').length;
+      data.body.forEach(function (r) { max = Math.max(max, String(r[i] || '').length); });
+      col.width = Math.min(48, Math.max(10, max + 2));
+    });
+    return wb;
+  }
+
+  function columnLetter(n) {
+    var s = '';
+    while (n > 0) {
+      var m = (n - 1) % 26;
+      s = String.fromCharCode(65 + m) + s;
+      n = Math.floor((n - 1) / 26);
+    }
+    return s;
+  }
+
+  /**
+   * PDF « exécutif » : bandeau (logo VRSC, titre, contexte), cartes de synthèse (lignes, totaux), tableau zébré
+   * avec en-tête répété et ligne de total, pied de page (confidentialité, pagination).
+   */
+  function executiveDocDefinition(title, data, meta) {
+    meta = meta || {};
+    var NAVY = '#0D5487';
+    var GREY = '#5B6573';
+    // Montants et quantités à droite ; dates et textes à gauche.
+    var numeric = (data.types || data.numeric || []).map(function (type) { return !!type && type !== 'date' && type !== 'datetime'; });
+    var widths = data.headers.map(function (_, i) { return numeric[i] ? 'auto' : '*'; });
+    var head = data.headers.map(function (h, i) { return { text: h, style: 'th', alignment: numeric[i] ? 'right' : 'left' }; });
+    var body = [head].concat(data.body.map(function (r) {
+      return r.map(function (v, i) { return { text: v, alignment: numeric[i] ? 'right' : 'left', noWrap: !!numeric[i] }; });
+    }));
+    var hasTotals = (data.totals || []).some(function (v) { return v !== null; }) && data.body.length > 0;
+    if (hasTotals) {
+      body.push(data.headers.map(function (_, i) {
+        if (i === 0) return { text: meta.totalLabel || 'Total', bold: true, fillColor: '#E8EEF4' };
+        return { text: data.totalsText[i] || '', bold: true, alignment: 'right', noWrap: true, fillColor: '#E8EEF4' };
+      }));
+    }
+    var cards = [{ label: meta.countLabel || 'Lignes', value: String(meta.count !== undefined ? meta.count : data.body.length) }];
+    (data.totals || []).forEach(function (v, i) {
+      if (v !== null) cards.push({ label: data.headers[i], value: data.totalsText[i] });
+    });
+    var brand = meta.logo
+      ? { svg: meta.logo, width: 120 }
+      : { text: 'VRSC', bold: true, fontSize: 18, color: NAVY };
+    return {
+      pageOrientation: 'landscape',
+      pageSize: 'A4',
+      pageMargins: [28, 30, 28, 40],
+      defaultStyle: { fontSize: 8, color: '#1D2733' },
+      styles: { th: { bold: true, color: '#FFFFFF', fillColor: NAVY, fontSize: 8 } },
+      info: { title: title, author: meta.author || 'ETHAN VRSC', creator: 'ETHAN VRSC' },
+      footer: function (current, count) {
+        return { columns: [
+          { text: 'ETHAN VRSC · VRSC SARL — ' + (meta.confidential || 'Document interne'), fontSize: 7, color: GREY, margin: [28, 12, 0, 0] },
+          { text: current + ' / ' + count, alignment: 'right', fontSize: 7, color: GREY, margin: [0, 12, 28, 0] }
+        ] };
+      },
+      content: [
+        { columns: [
+          brand,
+          { stack: [
+            { text: title, fontSize: 15, bold: true, color: NAVY, alignment: 'right' },
+            { text: [meta.filters, meta.subtitle].filter(Boolean).join(' · '), fontSize: 8, color: GREY, alignment: 'right', margin: [0, 3, 0, 0] },
+            meta.author ? { text: meta.author, fontSize: 8, color: GREY, alignment: 'right' } : { text: '' }
+          ] }
+        ] },
+        { canvas: [
+          { type: 'line', x1: 0, y1: 0, x2: 786, y2: 0, lineWidth: 1.5, lineColor: NAVY },
+          { type: 'line', x1: 0, y1: 0, x2: 90, y2: 0, lineWidth: 1.5, lineColor: '#F5A369' }
+        ], margin: [0, 8, 0, 10] },
+        { columns: cards.slice(0, 5).map(function (c) {
+          return { table: { widths: ['*'], body: [[{ stack: [
+            { text: c.label, fontSize: 7, color: GREY },
+            { text: c.value, fontSize: 12, bold: true, color: NAVY, margin: [0, 2, 0, 0] }
+          ], margin: [6, 5, 6, 5] }]] }, layout: {
+            hLineWidth: function () { return 0.5; }, vLineWidth: function () { return 0.5; },
+            hLineColor: function () { return '#DDE1E6'; }, vLineColor: function () { return '#DDE1E6'; }
+          } };
+        }), columnGap: 8, margin: [0, 0, 0, 12] },
+        {
+          table: { headerRows: 1, widths: widths, body: body, dontBreakRows: true },
+          layout: {
+            hLineColor: function () { return '#DDE1E6'; },
+            hLineWidth: function (i, node) { return i === 0 || i === node.table.body.length ? 0 : 0.5; },
+            vLineWidth: function () { return 0; },
+            fillColor: function (rowIndex, node) { return rowIndex > 0 && rowIndex % 2 === 0 && !(hasTotals && rowIndex === node.table.body.length - 1) ? '#F5F7FA' : null; },
+            paddingTop: function () { return 4; },
+            paddingBottom: function () { return 4; }
           }
         }
       ]
@@ -911,7 +1081,7 @@
       var out = {};
       Object.keys(node).forEach(function (k) {
         // Images (data URL) et couleurs : inchangées
-        out[k] = k === 'image' ? node[k] : pdfSafe(node[k]);
+        out[k] = k === 'image' || k === 'svg' ? node[k] : pdfSafe(node[k]);
       });
       return out;
     }
@@ -941,7 +1111,8 @@
   }
 
   function exportExcel(ExcelJS, title, data, meta) {
-    return buildWorkbook(ExcelJS, title, data, meta).xlsx.writeBuffer().then(function (buffer) {
+    var wb = meta && meta.executive ? buildExecutiveWorkbook(ExcelJS, title, data, meta) : buildWorkbook(ExcelJS, title, data, meta);
+    return wb.xlsx.writeBuffer().then(function (buffer) {
       saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
         Core.exportFileName(title, 'xlsx'));
     });
@@ -959,13 +1130,15 @@
   }
 
   function exportPdf(pdfMake, title, data, meta) {
-    downloadPdf(pdfMake, listDocDefinition(title, data, meta), Core.exportFileName(title, 'pdf'));
+    downloadPdf(pdfMake, meta && meta.executive ? executiveDocDefinition(title, data, meta) : listDocDefinition(title, data, meta), Core.exportFileName(title, 'pdf'));
   }
 
   return {
     tableData: tableData,
     buildWorkbook: buildWorkbook,
     listDocDefinition: listDocDefinition,
+    buildExecutiveWorkbook: buildExecutiveWorkbook,
+    executiveDocDefinition: executiveDocDefinition,
     workOrderDocDefinition: workOrderDocDefinition,
     exportExcel: exportExcel,
     exportPdf: exportPdf,

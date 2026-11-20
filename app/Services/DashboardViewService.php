@@ -214,7 +214,7 @@ final class DashboardViewService
         $bySite = [];
         foreach ($spendBySite as $id => $row) {
             if (isset($siteNames[$id])) {
-                $bySite[] = ['name' => $siteNames[$id]] + $row;
+                $bySite[] = ['id' => (int) $id, 'name' => $siteNames[$id]] + $row;
             }
         }
         usort($bySite, static fn (array $a, array $b): int => $b['engaged'] <=> $a['engaged']);

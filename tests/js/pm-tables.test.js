@@ -27,7 +27,12 @@ const REPOSITORIES = {
   purchase_execution: 'PurchaseRepository',
   finance_summary: 'FinanceRepository',
   equipment_costs: 'EquipmentCostRepository',
-  fuel_refills: 'EquipmentCostRepository'
+  fuel_refills: 'EquipmentCostRepository',
+  drill_payments: 'DashboardDrillRepository',
+  drill_invoices: 'DashboardDrillRepository',
+  drill_commitments: 'DashboardDrillRepository',
+  drill_cost_lines: 'DashboardDrillRepository',
+  drill_stock_values: 'DashboardDrillRepository'
 };
 
 test('chaque tableau a un repository et chaque colonne triable est dans sa liste blanche PHP', () => {
@@ -81,7 +86,12 @@ test('le rendu HTML échappe les données utilisateur', () => {
     equipment_costs: { code: evil, name: evil, site: evil, category: evil, meter_basis: 'hours', usage_value: null, fuel: 1, parts: 2, tyres_filters: 1, lubricants: 1,
       labor: 0, external: 3, other: 0, total: 8, missing_count: 1, unit_cost: null, prev_total: 2, ytd_total: 10, fuel_ratio: 1.5, fuel_alert: 'over', meter_alert: 1 },
     fuel_refills: { refill_date: '2026-01-05', reference: evil, voucher_ref: evil, equipment: evil, equipment_name: evil, site: evil, litres: 10, amount: null,
-      hour_meter: 100, odometer_km: null, meter_alert: evil, source: 'external', station: evil, user: evil }
+      hour_meter: 100, odometer_km: null, meter_alert: evil, source: 'external', station: evil, user: evil },
+    drill_payments: { reference: evil, date: '2026-01-05', site: evil, party: evil, kind: 'expense', category: 'other', status: 'paid', amount: 10, link: evil },
+    drill_invoices: { reference: evil, date: '2026-01-05', due_date: '2026-01-01', party: evil, site: evil, amount: 10, paid: 2, unpaid: 8, link: evil },
+    drill_commitments: { reference: evil, date: '2026-01-05', kind: 'order', party: evil, site: evil, category: 'fuel', status: 'issued', amount: 10, link: evil },
+    drill_cost_lines: { date: '2026-01-05', equipment: evil, site: evil, category: 'fuel', label: evil, kind: 'fuel_refill', reference: evil, quantity: 2, unit: evil, amount: null, link: evil },
+    drill_stock_values: { reference: evil, label: evil, site: evil, category: 'fuel', quantity: 2, unit: evil, avg_cost: null, value: 0, link: evil }
   };
   for (const [name, def] of Object.entries(defs)) {
     for (const col of def.columns) {

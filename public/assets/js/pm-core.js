@@ -115,8 +115,11 @@
 
   /** Remplace {clé} dans un gabarit d'URL par les valeurs (encodées) de la ligne. */
   function fillUrl(template, row) {
-    return String(template).replace(/\{(\w+)\}/g, function (_, key) {
-      return encodeURIComponent(row[key] === undefined || row[key] === null ? '' : row[key]);
+    return String(template).replace(/\{(!?)(\w+)\}/g, function (_, raw, key) {
+      var v = row[key] === undefined || row[key] === null ? '' : String(row[key]);
+      // {!clé} : chemin relatif fourni par le serveur (jamais une autre origine).
+      if (raw) return /^\/(?!\/)/.test(v) ? v : '#';
+      return encodeURIComponent(v);
     });
   }
 
