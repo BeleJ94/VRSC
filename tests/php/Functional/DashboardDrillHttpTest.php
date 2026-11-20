@@ -82,6 +82,14 @@ final class DashboardDrillHttpTest extends DatabaseTestCase
         self::assertSame([['F-1', 200.0, 300.0]], array_map(static fn (array $r): array => [$r['reference'], (float) $r['paid'], (float) $r['unpaid']], $unpaid));
         self::assertSame(1, $this->json($finance, '/dashboard/drill/invoices?draw=1&overdue=1')['recordsFiltered']);
         self::assertStringEndsWith('/purchases/' . $order, $unpaid[0]['link']);
+        // Commandes : en cours, en retard, par fournisseur ; hors périmètre exclu.
+        $this->db->execute("UPDATE purchase_orders SET status = 'issued', expected_on = CURDATE() - INTERVAL 3 DAY WHERE id = :id", ['id' => $order]);
+        $orders = $this->json($finance, '/dashboard/drill/orders?draw=1&status=issued,partially_received')['data'];
+        self::assertSame(['BC-1'], array_column($orders, 'reference'));
+        self::assertStringEndsWith('/purchases/' . $order, $orders[0]['link']);
+        self::assertSame(1, $this->json($finance, '/dashboard/drill/orders?draw=1&late=1')['recordsFiltered']);
+        self::assertSame(1, $this->json($finance, '/dashboard/drill/orders?draw=1&supplier_id=' . $supplier)['recordsFiltered']);
+        self::assertSame(0, $this->json($this->createUser('finance', [$this->other]), '/dashboard/drill/orders?draw=1')['recordsFiltered']);
         // Engagements : la commande apparaît, avec sa catégorie d'EDB.
         self::assertContains('BC-1', array_column($this->json($finance, '/dashboard/drill/commitments?draw=1&from=' . date('Y-m-01') . '&to=' . date('Y-m-d'))['data'], 'reference'));
     }

@@ -66,7 +66,7 @@ final class DashboardViewsHttpTest extends DatabaseTestCase
         $logistics = $this->page('logistics', [], true);
         self::assertStringContainsString('Dépenses engagées', $logistics);
         self::assertStringContainsString('Comparaison des sites', $logistics);
-        self::assertSame(['executive', 'finance', 'maintenance'], self::tabs($logistics));
+        self::assertSame(['executive', 'finance', 'purchasing', 'stores', 'maintenance'], self::tabs($logistics));
 
         // Finance et caissier : vue finance par défaut.
         self::assertStringContainsString('Trésorerie des caisses', $this->page('finance', [], true));
@@ -74,11 +74,25 @@ final class DashboardViewsHttpTest extends DatabaseTestCase
         self::assertStringContainsString('Trésorerie des caisses', $cashier);
         self::assertSame([], self::tabs($cashier), 'Une seule vue : pas d\'onglets');
 
-        // Responsable maintenance : vue maintenance seule ; une vue non autorisée demandée est ignorée.
+        // Responsable maintenance : Maintenance par défaut, Magasin en plus (il mouvemente le stock de son site) ;
+        // une vue non autorisée demandée est ignorée.
         $manager = $this->page('manager', [$this->site], false, '/?view=executive');
         self::assertStringNotContainsString('Dépenses engagées', $manager);
         self::assertStringContainsString('Disponibilité du parc', $manager);
-        self::assertSame([], self::tabs($manager));
+        self::assertSame(['stores', 'maintenance'], self::tabs($manager));
+
+        // Magasinier : vue Magasin seule ; acheteur : Finance et Achats, Achats par défaut.
+        $keeper = $this->page('storekeeper', [$this->site], false);
+        foreach (['Valeur du stock', 'Sorties de stock', 'Cuves de gasoil', 'Réceptions attendues', 'Transferts en cours'] as $needle) {
+            self::assertStringContainsString($needle, $keeper, $needle);
+        }
+        self::assertSame([], self::tabs($keeper));
+        $buyer = $this->page('buyer', [], true);
+        foreach (['EDB émis', 'EDB à acheter', 'Commandes en cours', 'Délai EDB', 'Fournisseurs de la période'] as $needle) {
+            self::assertStringContainsString($needle, $buyer, $needle);
+        }
+        self::assertSame(['finance', 'purchasing'], self::tabs($buyer));
+        self::assertSame(['executive', 'finance', 'purchasing', 'stores', 'maintenance'], self::tabs($this->page('logistics', [], true)));
 
         // Profil sans vue dédiée (demandeur) : page servie, bandeau présent.
         self::assertStringContainsString('xdash-todo', $this->page('requester', [$this->site], false));

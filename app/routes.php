@@ -155,6 +155,7 @@ return static function (Router $r): void {
     $r->get('/dashboard/drill/payments', [\App\Controllers\DashboardDrillController::class, 'payments'], ['permission' => 'finance.view']);
     $r->get('/dashboard/drill/invoices', [\App\Controllers\DashboardDrillController::class, 'invoices'], ['permission' => 'finance.view']);
     $r->get('/dashboard/drill/commitments', [\App\Controllers\DashboardDrillController::class, 'commitments'], ['permission' => 'finance.view']);
+    $r->get('/dashboard/drill/orders', [\App\Controllers\DashboardDrillController::class, 'orders'], ['permission' => 'edb.view']);
     $r->get('/dashboard/drill/cost-lines', [\App\Controllers\DashboardDrillController::class, 'costLines'], ['permission' => 'costs.view']);
     $r->get('/dashboard/drill/stock-values', [\App\Controllers\DashboardDrillController::class, 'stockValues'], ['permission' => 'stock.view']);
     $r->get('/stock/transfers', [StockTransferController::class, 'index'], ['permission' => 'stock.view']);

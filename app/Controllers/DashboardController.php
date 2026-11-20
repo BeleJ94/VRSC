@@ -32,7 +32,8 @@ final class DashboardController extends Controller
         $views = DashboardViewService::viewsFor($user);
         $view = in_array($request->string('view'), $views, true) ? (string) $request->string('view') : (DashboardViewService::defaultView($user, $views) ?? 'maintenance');
         $periodKey = in_array($request->string('period'), ExecutiveDashboardRepository::PERIODS, true) ? (string) $request->string('period') : 'month';
-        $period = $view === 'executive' || $view === 'finance' ? ExecutiveDashboardRepository::period($periodKey) : null;
+        $periodViews = ['executive', 'finance', 'purchasing', 'stores'];
+        $period = in_array($view, $periodViews, true) ? ExecutiveDashboardRepository::period($periodKey) : null;
         $common = [
             'title' => t('nav.dashboard'),
             'sites' => $this->sites->listActive(),
@@ -42,8 +43,8 @@ final class DashboardController extends Controller
             'period' => $period,
             'todo' => $this->views->todo($siteId),
         ];
-        if ($view === 'executive' || $view === 'finance') {
-            return $this->render('dashboard/index', $common + ['dash' => $view === 'executive' ? $this->views->executive($period, $siteId) : $this->views->finance($period, $siteId)]);
+        if (in_array($view, $periodViews, true)) {
+            return $this->render('dashboard/index', $common + ['dash' => $this->views->{$view}($period, $siteId)]);
         }
 
         return $this->render('dashboard/index', $common + [

@@ -273,6 +273,175 @@ final class ExecutiveDashboardRepository extends Repository
         );
     }
 
+    /** Valeur des mouvements de stock par mois : sorties (out) ou entrées (réceptions, retours, transferts reçus). @return array<string, float> */
+    public function movementsByMonth(string $direction, string $from, string $to, ?int $siteId): array
+    {
+        [$s, $p] = $this->sites('m.site_id', $siteId, 'mv');
+        $types = $direction === 'out' ? "('out')" : "('receipt', 'return', 'transfer_in')";
+
+        return array_map('floatval', array_column($this->db->fetchAll(
+            "SELECT DATE_FORMAT(m.moved_on, '%Y-%m') AS m, SUM(ABS(COALESCE(m.value, 0))) AS v FROM stock_movements m
+              WHERE m.type IN $types AND m.moved_on BETWEEN :f AND :t AND $s GROUP BY m",
+            ['f' => $from, 't' => $to] + $p
+        ), 'v', 'm'));
+    }
+
+    /** Articles sous le seuil minimum (stock positif) et en rupture (stock nul avec un seuil). */
+    public function stockLevels(?int $siteId): array
+    {
+        [$s, $p] = $this->sites('ps.site_id', $siteId, 'lv');
+
+        return $this->db->fetchOne(
+            "SELECT COALESCE(SUM(ps.min_quantity > 0 AND ps.quantity > 0 AND ps.quantity < ps.min_quantity), 0) AS low,
+                    COALESCE(SUM(ps.min_quantity > 0 AND ps.quantity <= 0), 0) AS out_of_stock
+               FROM part_stocks ps JOIN parts pt ON pt.id = ps.part_id AND pt.is_active = 1 WHERE $s",
+            $p
+        ) ?? ['low' => 0, 'out_of_stock' => 0];
+    }
+
+    /** Cuves de carburant par site : stock, consommation moyenne sur 30 jours, autonomie en jours. */
+    public function fuelTanks(?int $siteId): array
+    {
+        [$s, $p] = $this->sites('ps.site_id', $siteId, 'ft');
+
+        return $this->db->fetchAll(
+            "SELECT ps.site_id, s.name AS site, pt.id AS part_id, pt.reference, ps.quantity, ps.min_quantity, pt.unit,
+                    (SELECT COALESCE(SUM(-m.delta), 0) / 30 FROM stock_movements m
+                      WHERE m.part_id = ps.part_id AND m.site_id = ps.site_id AND m.type = 'out' AND m.moved_on >= CURDATE() - INTERVAL 30 DAY) AS daily
+               FROM part_stocks ps JOIN parts pt ON pt.id = ps.part_id AND pt.part_type = 'fuel' AND pt.is_active = 1 JOIN sites s ON s.id = ps.site_id
+              WHERE $s ORDER BY s.name",
+            $p
+        );
+    }
+
+    /** États de besoins approuvés restant à servir, du plus ancien au plus récent. */
+    public function edbToServe(?int $siteId, int $limit = 6): array
+    {
+        [$s, $p] = $this->sites('r.site_id', $siteId, 'es');
+        $rows = $this->db->fetchAll(
+            "SELECT r.id, r.reference, r.subject, r.urgency, r.approved_at, s.name AS site, DATEDIFF(CURDATE(), DATE(r.approved_at)) AS age
+               FROM purchase_requests r JOIN sites s ON s.id = r.site_id WHERE r.status = 'approved' AND $s
+              ORDER BY FIELD(r.urgency, 'critical', 'urgent', 'normal'), r.approved_at LIMIT " . max(1, $limit),
+            $p
+        );
+        $count = (int) $this->db->fetchValue("SELECT COUNT(*) FROM purchase_requests r WHERE r.status = 'approved' AND $s", $p);
+
+        return ['count' => $count, 'rows' => $rows];
+    }
+
+    /** Commandes fournisseurs non soldées : nombre, montant, en retard, attendues sous 7 jours. */
+    public function openOrders(?int $siteId, int $limit = 6): array
+    {
+        [$s, $p] = $this->sites('o.site_id', $siteId, 'oo');
+        $summary = $this->db->fetchOne(
+            "SELECT COUNT(*) AS count, COALESCE(SUM(o.total_amount), 0) AS amount, COALESCE(SUM(o.expected_on < CURDATE()), 0) AS late
+               FROM purchase_orders o WHERE o.status IN ('issued', 'partially_received') AND $s",
+            $p
+        ) ?? [];
+        $rows = $this->db->fetchAll(
+            "SELECT o.id, o.reference, o.expected_on, o.total_amount, o.status, sp.name AS supplier, s.name AS site, DATEDIFF(o.expected_on, CURDATE()) AS days
+               FROM purchase_orders o JOIN suppliers sp ON sp.id = o.supplier_id JOIN sites s ON s.id = o.site_id
+              WHERE o.status IN ('issued', 'partially_received') AND $s ORDER BY o.expected_on IS NULL, o.expected_on LIMIT " . max(1, $limit),
+            $p
+        );
+
+        return ['count' => (int) ($summary['count'] ?? 0), 'amount' => (float) ($summary['amount'] ?? 0), 'late' => (int) ($summary['late'] ?? 0), 'rows' => $rows];
+    }
+
+    /** Transferts de stock en cours touchant un site du périmètre (à autoriser, à expédier, en transit). */
+    public function openTransfers(?int $siteId, int $limit = 6): array
+    {
+        [$sf, $pf] = $this->sites('t.from_site_id', $siteId, 'tf');
+        [$st, $pt] = $this->sites('t.to_site_id', $siteId, 'tt');
+
+        return $this->db->fetchAll(
+            "SELECT t.id, t.reference, t.status, t.requested_at, t.shipped_at, sf.name AS from_site, st.name AS to_site,
+                    (SELECT COUNT(*) FROM stock_transfer_lines l WHERE l.transfer_id = t.id) AS line_count
+               FROM stock_transfers t JOIN sites sf ON sf.id = t.from_site_id JOIN sites st ON st.id = t.to_site_id
+              WHERE t.status IN ('requested', 'authorized', 'shipped') AND (($sf) OR ($st))
+              ORDER BY FIELD(t.status, 'shipped', 'authorized', 'requested'), t.requested_at LIMIT " . max(1, $limit),
+            $pf + $pt
+        );
+    }
+
+    /** États de besoins émis par mois (nombre). @return array<string, float> */
+    public function edbIssuedByMonth(string $from, string $to, ?int $siteId): array
+    {
+        [$s, $p] = $this->sites('r.site_id', $siteId, 'ei');
+
+        return array_map('floatval', array_column($this->db->fetchAll(
+            "SELECT DATE_FORMAT(r.requested_at, '%Y-%m') AS m, COUNT(*) AS v FROM purchase_requests r
+              WHERE r.requested_at BETWEEN :f AND :t AND $s GROUP BY m",
+            ['f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59'] + $p
+        ), 'v', 'm'));
+    }
+
+    /** Répartition des états de besoins par statut (tous, ou émis sur la période). @return array<string, int> */
+    public function edbByStatus(?int $siteId, ?string $from = null, ?string $to = null): array
+    {
+        [$s, $p] = $this->sites('r.site_id', $siteId, 'eb');
+        $period = '';
+        if ($from !== null && $to !== null) {
+            $period = ' AND r.requested_at BETWEEN :f AND :t';
+            $p += ['f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59'];
+        }
+
+        return array_map('intval', array_column($this->db->fetchAll("SELECT r.status, COUNT(*) AS n FROM purchase_requests r WHERE $s$period GROUP BY r.status", $p), 'n', 'status'))
+            + ['pending' => 0, 'approved' => 0, 'executed' => 0, 'cancelled' => 0];
+    }
+
+    /** États de besoins approuvés sans aucune commande ni service depuis le stock : à acheter. */
+    public function edbToBuy(?int $siteId): int
+    {
+        [$s, $p] = $this->sites('r.site_id', $siteId, 'eu');
+
+        return (int) $this->db->fetchValue(
+            "SELECT COUNT(*) FROM purchase_requests r WHERE r.status = 'approved' AND $s
+                AND NOT EXISTS (SELECT 1 FROM purchase_orders o WHERE o.request_id = r.id AND o.status <> 'cancelled')",
+            $p
+        );
+    }
+
+    /** Délai moyen (jours) entre l'émission de l'EDB et la commande, pour les commandes passées sur la période. */
+    public function leadDays(string $from, string $to, ?int $siteId): ?float
+    {
+        [$s, $p] = $this->sites('o.site_id', $siteId, 'ld');
+        $v = $this->db->fetchValue(
+            "SELECT AVG(TIMESTAMPDIFF(HOUR, r.requested_at, o.ordered_at)) / 24 FROM purchase_orders o JOIN purchase_requests r ON r.id = o.request_id
+              WHERE o.status <> 'cancelled' AND o.ordered_at BETWEEN :f AND :t AND $s",
+            ['f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59'] + $p
+        );
+
+        return $v !== null ? round((float) $v, 1) : null;
+    }
+
+    /** Délai moyen EDB → commande par mois. @return array<string, float> */
+    public function leadDaysByMonth(string $from, string $to, ?int $siteId): array
+    {
+        [$s, $p] = $this->sites('o.site_id', $siteId, 'lm');
+
+        return array_map(static fn ($v): float => round((float) $v, 1), array_column($this->db->fetchAll(
+            "SELECT DATE_FORMAT(o.ordered_at, '%Y-%m') AS m, AVG(TIMESTAMPDIFF(HOUR, r.requested_at, o.ordered_at)) / 24 AS v
+               FROM purchase_orders o JOIN purchase_requests r ON r.id = o.request_id
+              WHERE o.status <> 'cancelled' AND o.ordered_at BETWEEN :f AND :t AND $s GROUP BY m",
+            ['f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59'] + $p
+        ), 'v', 'm'));
+    }
+
+    /** Fournisseurs par montant commandé sur la période. */
+    public function suppliersRanking(string $from, string $to, ?int $siteId, int $limit = 6): array
+    {
+        [$s, $p] = $this->sites('o.site_id', $siteId, 'sr');
+
+        return $this->db->fetchAll(
+            "SELECT sp.id, sp.name, COUNT(*) AS orders, SUM(o.total_amount) AS amount, SUM(o.status IN ('issued', 'partially_received')) AS open
+               FROM purchase_orders o JOIN suppliers sp ON sp.id = o.supplier_id
+              WHERE o.status <> 'cancelled' AND o.ordered_at BETWEEN :f AND :t AND $s
+              GROUP BY sp.id, sp.name ORDER BY amount DESC LIMIT " . max(1, $limit),
+            ['f' => $from . ' 00:00:00', 't' => $to . ' 23:59:59'] + $p
+        );
+    }
+
     /** Engins en route entre deux sites. */
     public function fleetInTransit(?int $siteId): int
     {

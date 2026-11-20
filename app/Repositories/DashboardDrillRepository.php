@@ -122,6 +122,37 @@ final class DashboardDrillRepository extends Repository
         return $this->paginate($dt, 'x.*', $source, [], $paramsO + $paramsP, $where, $fp, ['x.reference', 'x.party', 'x.site']);
     }
 
+    /** Commandes fournisseurs ; échéance = date de livraison attendue. */
+    public function orders(DataTableRequest $dt, array $filters): array
+    {
+        [$scope, $params] = $this->scope->clause('o.site_id');
+        $base = $this->db->pdo()->quote(url('/purchases/'));
+        $source = "(SELECT o.id, o.site_id, o.reference, o.ordered_at AS date, o.expected_on AS due_date, sp.id AS supplier_id, sp.name AS party, s.name AS site,
+                           r.reference AS label, o.status, o.total_amount AS amount, CONCAT($base, o.id) AS link
+                      FROM purchase_orders o JOIN suppliers sp ON sp.id = o.supplier_id JOIN sites s ON s.id = o.site_id JOIN purchase_requests r ON r.id = o.request_id
+                     WHERE $scope) x";
+        $where = [];
+        $fp = [];
+        self::common($filters, $where, $fp);
+        if (!empty($filters['status'])) {
+            $marks = [];
+            foreach (explode(',', (string) $filters['status']) as $i => $v) {
+                $marks[] = ":f_st_$i";
+                $fp["f_st_$i"] = $v;
+            }
+            $where[] = 'x.status IN (' . implode(', ', $marks) . ')';
+        }
+        if (!empty($filters['late'])) {
+            $where[] = "x.status IN ('issued', 'partially_received') AND x.due_date < CURDATE()";
+        }
+        if (!empty($filters['supplier_id'])) {
+            $where[] = 'x.supplier_id = :f_sup';
+            $fp['f_sup'] = (int) $filters['supplier_id'];
+        }
+
+        return $this->paginate($dt, 'x.*', $source, [], $params, $where, $fp, ['x.reference', 'x.party', 'x.label', 'x.site']);
+    }
+
     /** Lignes de coût imputées aux engins (pièces sources). */
     public function costLines(DataTableRequest $dt, array $filters): array
     {

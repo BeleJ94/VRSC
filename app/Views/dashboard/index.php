@@ -7,7 +7,7 @@
 $view->share('pageScripts', $dashView === 'maintenance' ? ['vendor/chart.umd.min.js', 'js/dashboard.js', 'js/dashboard-views.js'] : ['js/dashboard-views.js']);
 if ($dashView !== 'maintenance'):
     echo $view->partial('dashboard/_header', ['dashView' => $dashView, 'views' => $views, 'period' => $period, 'sites' => $sites, 'siteId' => $siteId, 'todo' => $todo]);
-    if ($dashView === 'executive' || $dashView === 'finance') {
+    if (in_array($dashView, ['executive', 'finance', 'purchasing', 'stores'], true)) {
         echo $view->partial('dashboard/' . $dashView, ['dash' => $dash, 'period' => $period, 'siteId' => $siteId]);
     }
     return;

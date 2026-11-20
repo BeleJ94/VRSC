@@ -32,6 +32,11 @@ final class DashboardDrillController extends Controller
         return $this->json($this->drill->commitments($this->dt($request, ['x.date', 'DESC']), $this->filters($request, ['category'])));
     }
 
+    public function orders(Request $request): Response
+    {
+        return $this->json($this->drill->orders($this->dt($request, ['x.date', 'DESC']), $this->filters($request, ['status', 'late', 'supplier_id'])));
+    }
+
     public function costLines(Request $request): Response
     {
         return $this->json($this->drill->costLines($this->dt($request, ['x.date', 'DESC']), $this->filters($request, ['equipment_id', 'missing'])));

@@ -3,8 +3,8 @@
  * En-tête commun des tableaux de bord : titre, onglets des vues accessibles, période, site, bandeau « À traiter ».
  * @var string $dashView  @var list<string> $views  @var array|null $period  @var array $sites  @var int|null $siteId  @var array $todo
  */
-$viewIcons = ['executive' => 'presentation', 'finance' => 'landmark', 'maintenance' => 'wrench'];
-$viewLabels = ['executive' => 'dashboard.view_executive', 'finance' => 'dashboard.view_finance', 'maintenance' => 'dashboard.view_maintenance'];
+$viewIcons = ['executive' => 'presentation', 'finance' => 'landmark', 'purchasing' => 'shopping-bag', 'stores' => 'warehouse', 'maintenance' => 'wrench'];
+$viewLabels = ['executive' => 'dashboard.view_executive', 'finance' => 'dashboard.view_finance', 'purchasing' => 'dashboard.view_purchasing', 'stores' => 'dashboard.view_stores', 'maintenance' => 'dashboard.view_maintenance'];
 $periodLabels = ['month' => 'dashboard.period_month', 'last_month' => 'dashboard.period_last_month', 'quarter' => 'dashboard.period_quarter', 'year' => 'dashboard.period_year'];
 $sq = ($siteId ?? null) !== null ? ['site_id' => $siteId] : [];
 $todoDrills = [

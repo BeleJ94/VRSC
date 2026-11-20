@@ -40,6 +40,8 @@ enum Role: string
         'readings.manage' => ['admin'],
         'dashboard.view' => ['admin', 'manager', 'technician', 'viewer', ...self::VRSC],
         'dashboard.executive' => ['admin', 'director', 'logistics', 'finance'],
+        'dashboard.purchasing' => ['admin', 'buyer', 'logistics', 'director'],
+        'dashboard.stores' => ['admin', 'storekeeper', 'logistics', 'manager'],
         // Référentiels communs, délégations et circuit d'approbation
         'reference.view' => ['admin', 'manager', 'viewer', ...self::VRSC],
         'reference.manage' => ['admin', 'logistics'],

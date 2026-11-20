@@ -466,6 +466,28 @@
         ]
       },
 
+      drill_orders: {
+        order: [[1, 'desc']],
+        columns: [
+          { data: 'reference', title: t('js.drill.order'), html: function (r) {
+            return '<strong>' + esc(r.reference) + '</strong><br><span class="muted">' + esc(r.label) + '</span>';
+          }, text: function (r) { return r.reference + ' – ' + r.label; } },
+          { data: 'date', title: t('js.date'), className: 'nowrap', text: function (r) { return date(r.date); } },
+          { data: 'due_date', title: t('js.drill.expected'), className: 'nowrap', html: function (r) {
+            var late = r.due_date && (r.status === 'issued' || r.status === 'partially_received') && r.due_date < new Date().toISOString().slice(0, 10);
+            return late ? '<span class="badge badge--breakdown">' + esc(date(r.due_date)) + '</span>' : esc(date(r.due_date));
+          }, text: function (r) { return date(r.due_date); } },
+          { data: 'party', title: t('js.drill.supplier') },
+          { data: 'site', title: t('fields.site_id') },
+          { data: 'status', title: t('fields.status'), html: function (r) {
+            var cls = { received: 'available', partially_received: 'waiting_part', issued: 'maintenance', cancelled: 'neutral' }[r.status] || 'neutral';
+            return '<span class="badge badge--' + cls + '">' + esc(t('order_status.' + r.status)) + '</span>';
+          }, text: function (r) { return t('order_status.' + r.status); } },
+          { data: 'amount', title: t('js.drill.amount'), className: 'dt-right', html: function (r) { return '<strong>' + esc(Core.formatMoney(r.amount, locale)) + '</strong>'; },
+            text: function (r) { return Core.formatMoney(r.amount, locale); } }
+        ]
+      },
+
       drill_cost_lines: {
         order: [[0, 'desc']],
         columns: [
@@ -593,6 +615,7 @@
       drill_payments: { date: { type: 'date' }, amount: { type: 'money', total: true } },
       drill_invoices: { date: { type: 'date' }, due_date: { type: 'date' }, amount: { type: 'money', total: true }, paid: { type: 'money', total: true }, unpaid: { type: 'money', total: true } },
       drill_commitments: { date: { type: 'date' }, amount: { type: 'money', total: true } },
+      drill_orders: { date: { type: 'date' }, due_date: { type: 'date' }, amount: { type: 'money', total: true } },
       drill_cost_lines: { date: { type: 'date' }, quantity: { type: 'qty' }, amount: { type: 'money', total: true } },
       drill_stock_values: { quantity: { type: 'qty' }, avg_cost: { type: 'money' }, value: { type: 'money', total: true } },
       purchase_execution: { approved_at: { type: 'date' }, qty_remaining: { type: 'qty' }, age_days: { type: 'int', unit: days } }

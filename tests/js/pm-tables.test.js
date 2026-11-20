@@ -31,6 +31,7 @@ const REPOSITORIES = {
   drill_payments: 'DashboardDrillRepository',
   drill_invoices: 'DashboardDrillRepository',
   drill_commitments: 'DashboardDrillRepository',
+  drill_orders: 'DashboardDrillRepository',
   drill_cost_lines: 'DashboardDrillRepository',
   drill_stock_values: 'DashboardDrillRepository'
 };
@@ -90,6 +91,7 @@ test('le rendu HTML échappe les données utilisateur', () => {
     drill_payments: { reference: evil, date: '2026-01-05', site: evil, party: evil, kind: 'expense', category: 'other', status: 'paid', amount: 10, link: evil },
     drill_invoices: { reference: evil, date: '2026-01-05', due_date: '2026-01-01', party: evil, site: evil, amount: 10, paid: 2, unpaid: 8, link: evil },
     drill_commitments: { reference: evil, date: '2026-01-05', kind: 'order', party: evil, site: evil, category: 'fuel', status: 'issued', amount: 10, link: evil },
+    drill_orders: { reference: evil, label: evil, date: '2026-01-05', due_date: '2026-01-01', party: evil, site: evil, status: 'issued', amount: 10, link: evil },
     drill_cost_lines: { date: '2026-01-05', equipment: evil, site: evil, category: 'fuel', label: evil, kind: 'fuel_refill', reference: evil, quantity: 2, unit: evil, amount: null, link: evil },
     drill_stock_values: { reference: evil, label: evil, site: evil, category: 'fuel', quantity: 2, unit: evil, avg_cost: null, value: 0, link: evil }
   };

@@ -21,13 +21,15 @@ final class DashboardViewService
     public const VIEWS = [
         'executive' => 'dashboard.executive',
         'finance' => 'finance.view',
+        'purchasing' => 'dashboard.purchasing',
+        'stores' => 'dashboard.stores',
         'maintenance' => 'equipment.view',
     ];
 
     /** Vue par défaut selon le rôle principal. */
     private const DEFAULT_VIEW = [
         'director' => 'executive', 'logistics' => 'executive', 'admin' => 'executive',
-        'finance' => 'finance', 'cashier' => 'finance', 'buyer' => 'finance',
+        'finance' => 'finance', 'cashier' => 'finance', 'buyer' => 'purchasing', 'storekeeper' => 'stores',
     ];
 
     public function __construct(
@@ -187,6 +189,72 @@ final class DashboardViewService
                 ['key' => 'out_of_service', 'count' => $outOfService, 'url' => '/equipment?status=out_of_service', 'level' => 'info', 'icon' => 'ban'],
                 ['key' => 'in_transit', 'count' => $this->exec->fleetInTransit($siteId), 'url' => '/fleet-transfers', 'level' => 'info', 'icon' => 'route'],
             ], static fn (array $a): bool => $a['count'] > 0)),
+        ];
+    }
+
+    /** Vue Magasin : valeur du stock, sorties et entrées, niveaux, EDB à servir, réceptions attendues ; cuves, transferts. */
+    public function stores(array $period, ?int $siteId): array
+    {
+        $trend = ExecutiveDashboardRepository::trendMonths($period['to']);
+        $earliest = min($trend[0] . '-01', $period['prev_from']);
+        $outs = $this->exec->movementsByMonth('out', $earliest, $period['to'], $siteId);
+        $ins = $this->exec->movementsByMonth('in', $earliest, $period['to'], $siteId);
+        $sum = fn (string $dir, string $from, string $to): float => ExecutiveDashboardRepository::sum($this->exec->movementsByMonth($dir, $from, $to, $siteId));
+        $levels = $this->exec->stockLevels($siteId);
+        $edb = $this->exec->edbToServe($siteId);
+        $orders = $this->exec->openOrders($siteId);
+        $tanks = array_map(static function (array $t): array {
+            $daily = (float) $t['daily'];
+            $t['autonomy'] = $daily > 0.01 ? round((float) $t['quantity'] / $daily, 1) : null;
+
+            return $t;
+        }, $this->exec->fuelTanks($siteId));
+
+        return [
+            'kpis' => [
+                'stock_value' => self::kpi(round(array_sum($this->exec->stockValueBySite($siteId)), 2), null, 'neutral'),
+                'outs' => self::kpi($sum('out', $period['from'], $period['to']), $sum('out', $period['prev_from'], $period['prev_to']), 'neutral', self::series($outs, $trend)),
+                'ins' => self::kpi($sum('in', $period['from'], $period['to']), $sum('in', $period['prev_from'], $period['prev_to']), 'neutral', self::series($ins, $trend)),
+                'levels' => self::kpi((float) ((int) $levels['low'] + (int) $levels['out_of_stock']), null, 'down', [], ['low' => (int) $levels['low'], 'out' => (int) $levels['out_of_stock']]),
+                'edb' => self::kpi((float) $edb['count'], null, 'down'),
+                'orders' => self::kpi((float) $orders['count'], null, 'neutral', [], ['amount' => $orders['amount'], 'late' => $orders['late']]),
+            ],
+            'trend_months' => $trend,
+            'tanks' => $tanks,
+            'edb' => $edb['rows'],
+            'orders' => $orders['rows'],
+            'transfers' => $this->exec->openTransfers($siteId),
+        ];
+    }
+
+    /** Vue Achats : EDB émis, en circuit, à acheter, commandes en cours et en retard, délai EDB → commande ; fournisseurs, pipeline. */
+    public function purchasing(array $period, ?int $siteId): array
+    {
+        $trend = ExecutiveDashboardRepository::trendMonths($period['to']);
+        $earliest = min($trend[0] . '-01', $period['prev_from']);
+        $issued = $this->exec->edbIssuedByMonth($earliest, $period['to'], $siteId);
+        $count = fn (string $from, string $to): float => ExecutiveDashboardRepository::sum($this->exec->edbIssuedByMonth($from, $to, $siteId));
+        $engaged = $this->exec->engagedByMonth($earliest, $period['to'], $siteId);
+        $engNow = ExecutiveDashboardRepository::sum($this->exec->engagedByMonth($period['from'], $period['to'], $siteId));
+        $engPrev = ExecutiveDashboardRepository::sum($this->exec->engagedByMonth($period['prev_from'], $period['prev_to'], $siteId));
+        $status = $this->exec->edbByStatus($siteId);
+        $orders = $this->exec->openOrders($siteId);
+        $lead = $this->exec->leadDays($period['from'], $period['to'], $siteId);
+        $leadPrev = $this->exec->leadDays($period['prev_from'], $period['prev_to'], $siteId);
+
+        return [
+            'kpis' => [
+                'issued' => self::kpi($count($period['from'], $period['to']), $count($period['prev_from'], $period['prev_to']), 'neutral', self::series($issued, $trend)),
+                'pending' => self::kpi((float) $status['pending'], null, 'down'),
+                'to_buy' => self::kpi((float) $this->exec->edbToBuy($siteId), null, 'down'),
+                'orders' => self::kpi($orders['amount'], null, 'neutral', [], ['count' => $orders['count'], 'late' => $orders['late']]),
+                'engaged' => self::kpi($engNow, $engPrev, 'neutral', self::series($engaged, $trend)),
+                'lead' => self::kpi((float) ($lead ?? 0), $leadPrev, 'down', self::series($this->exec->leadDaysByMonth($earliest, $period['to'], $siteId), $trend), ['empty' => $lead === null]),
+            ],
+            'trend_months' => $trend,
+            'suppliers' => $this->exec->suppliersRanking($period['from'], $period['to'], $siteId),
+            'pipeline' => $this->exec->edbByStatus($siteId, $period['from'], $period['to']),
+            'orders' => $orders['rows'],
         ];
     }
 
