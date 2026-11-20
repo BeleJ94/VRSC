@@ -1653,3 +1653,20 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
 .tabs__ext { width: 12px !important; height: 12px !important; opacity: .6; }
 .closing-form { margin-top: var(--space-2); }
 .closing-register + .closing-register { margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px dashed var(--border); }
+
+/* Logo VRSC */
+.sidebar__logo { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; color: #fff; text-decoration: none; min-width: 0; }
+.sidebar__logo:hover { text-decoration: none; }
+.sidebar__logo-full { display: block; width: 150px; height: auto; }
+.sidebar__logo-mark { display: none; width: 34px; height: auto; }
+.sidebar__product { font-size: .72rem; font-weight: 600; letter-spacing: .14em; opacity: .8; }
+@media (min-width: 861px) {
+  body.sidebar-mini .sidebar__logo { align-items: center; }
+  body.sidebar-mini .sidebar__logo-mark { display: block; }
+}
+.login__brand { flex-direction: column; align-items: flex-start; gap: 6px; }
+.login__logo-img { display: block; width: 220px; height: auto; }
+.login__product { font-size: .8rem; letter-spacing: .16em; opacity: .85; }
+.login__brand--compact { flex-direction: row; align-items: center; gap: var(--space-3); color: #fff; }
+.login__brand--compact .login__logo-img { width: 130px; }
+.auth__brand img { display: block; width: 150px; height: auto; }

@@ -1,7 +1,7 @@
 <?php /** @var string $email  @var string|null $error */ ?>
 <div class="login">
     <aside class="login__hero" aria-hidden="true">
-        <div class="login__brand"><span class="login__logo"><i data-lucide="wrench"></i></span> ETHAN VRSC</div>
+        <div class="login__brand"><img class="login__logo-img" src="<?= e(asset('img/logo-vrsc-white.svg')) ?>" alt="VRSC" width="220" height="68"><span class="login__product">ETHAN VRSC</span></div>
         <div class="login__pitch">
             <h2><?= e(t('auth.hero_title')) ?></h2>
             <p><?= e(t('auth.hero_text')) ?></p>
@@ -11,7 +11,7 @@
 
     <section class="login__panel">
         <div class="login__top">
-            <div class="login__brand login__brand--compact"><span class="login__logo"><i data-lucide="wrench"></i></span> ETHAN VRSC</div>
+            <div class="login__brand login__brand--compact"><img class="login__logo-img" src="<?= e(asset('img/logo-vrsc-white.svg')) ?>" alt="VRSC" width="130" height="40"><span class="login__product">ETHAN VRSC</span></div>
             <?= $view->partial('partials/lang_switch', ['currentPath' => '/login']) ?>
         </div>
 

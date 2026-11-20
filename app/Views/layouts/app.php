@@ -135,8 +135,11 @@ $navLink = static function (array $l) use ($activePath, $navCounts): string {
 <div class="layout">
     <aside class="sidebar" id="sidebar" aria-label="<?= e(t('nav.main')) ?>">
         <div class="sidebar__brand">
-            <i data-lucide="wrench"></i>
-            <div class="nav__text">ETHAN VRSC<small>VRSC SARL</small></div>
+            <a class="sidebar__logo" href="<?= e(url('/')) ?>" title="ETHAN VRSC — VRSC SARL">
+                <img class="sidebar__logo-full nav__text" src="<?= e(asset('img/logo-vrsc-white.svg')) ?>" alt="VRSC" width="150" height="47">
+                <img class="sidebar__logo-mark" src="<?= e(asset('img/logo-vrsc-mark-white.svg')) ?>" alt="VRSC" width="34" height="25">
+                <span class="sidebar__product nav__text">ETHAN VRSC</span>
+            </a>
             <button type="button" class="sidebar__collapse" data-sidebar-mini aria-pressed="false" title="<?= e(t('nav.collapse')) ?>" aria-label="<?= e(t('nav.collapse')) ?>"><i data-lucide="panel-left-close"></i></button>
         </div>
 
