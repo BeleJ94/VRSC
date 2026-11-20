@@ -108,6 +108,22 @@ final class StockAndPreventiveTest extends DatabaseTestCase
         self::assertCount(1, $preventive->generateDue(), '500 h ≥ 250 + 200 h');
     }
 
+    public function testCounterWorkOrderIsPreparedAtNinetyPercentOfTheInterval(): void
+    {
+        $preventive = $this->service($this->manager, PreventiveService::class);
+        $early = $this->createEquipment($this->site, 'CH-90', 'available', 220);
+        $preventive->create(['equipment_id' => (string) $early, 'title' => 'Vidange 250 h', 'interval_hours' => '250', 'last_done_hours' => '0', 'last_done_at' => date('Y-m-d'), 'is_active' => '1']);
+        self::assertSame([], $preventive->generateDue(), '220 h < 225 h (90 % de 250 h) : trop tôt');
+
+        $this->db->execute('UPDATE equipment SET hour_meter = 226 WHERE id = :id', ['id' => $early]);
+        self::assertCount(1, $preventive->generateDue(), '226 h ≥ 225 h : OT préparé avant l\'échéance de 250 h');
+
+        $bus = $this->createEquipment($this->site, 'BUS-90');
+        $this->db->execute("UPDATE equipment SET odometer_km = 59200, meter_basis = 'km' WHERE id = :id", ['id' => $bus]);
+        $preventive->create(['equipment_id' => (string) $bus, 'title' => 'Vidange 10 000 km', 'interval_km' => '10000', 'last_done_km' => '50000', 'last_done_at' => date('Y-m-d'), 'is_active' => '1']);
+        self::assertCount(1, $preventive->generateDue(), '59 200 km ≥ 59 000 km (échéance 60 000 km)');
+    }
+
     public function testPreventiveTriggeredByOdometer(): void
     {
         $equipment = $this->createEquipment($this->site, 'BUS-02');

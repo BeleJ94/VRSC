@@ -135,7 +135,7 @@ final class WorkOrderRepository extends Repository
                     e.hour_meter AS equipment_hour_meter, e.odometer_km AS equipment_odometer, s.name AS site, s.code AS site_code,
                     CONCAT(a.first_name, ' ', a.last_name) AS assignee,
                     CONCAT(r.first_name, ' ', r.last_name) AS reporter,
-                    p.title AS plan_title
+                    p.title AS plan_title, p.next_due_date AS plan_due_date, p.next_due_hours AS plan_due_hours, p.next_due_km AS plan_due_km
                FROM " . self::FROM . "
                LEFT JOIN preventive_plans p ON p.id = w.preventive_plan_id
               WHERE w.id = :id AND $scopeSql",

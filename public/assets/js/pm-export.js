@@ -486,6 +486,16 @@
     if (wo.hour_meter !== null && wo.hour_meter !== undefined) meters.push(n(wo.hour_meter, 0) + ' h');
     else if (wo.equipment_hour_meter !== null && wo.equipment_hour_meter !== undefined) meters.push(n(wo.equipment_hour_meter, 0) + ' h');
     if (wo.odometer_km !== null && wo.odometer_km !== undefined) meters.push(n(wo.odometer_km, 0) + ' km');
+    // OT préventif encore ouvert : plan déclencheur et seuils de l'échéance (date, heures, km).
+    var planRows = [];
+    if (wo.plan_title && wo.status !== 'done' && wo.status !== 'cancelled') {
+      var due = [];
+      if (wo.plan_due_date) due.push(d(wo.plan_due_date));
+      if (wo.plan_due_hours !== null && wo.plan_due_hours !== undefined) due.push(n(wo.plan_due_hours, 0) + ' h');
+      if (wo.plan_due_km !== null && wo.plan_due_km !== undefined) due.push(n(wo.plan_due_km, 0) + ' km');
+      planRows.push([t('js.wo_doc.plan'), wo.plan_title]);
+      if (due.length) planRows.push([t('js.wo_doc.plan_due'), due.join(' · '), true]);
+    }
     else if (wo.equipment_odometer !== null && wo.equipment_odometer !== undefined) meters.push(n(wo.equipment_odometer, 0) + ' km');
 
     var labor = wo.labor_minutes !== null && wo.labor_minutes !== undefined ? wo.labor_minutes + ' min' : '—';
@@ -533,7 +543,7 @@
             [t('fields.due_date'), d(wo.due_date)],
             [t('fields.completed_at'), d(wo.completed_at, true)],
             [t('fields.labor_minutes'), labor, true]
-          ])
+          ].concat(planRows))
         ],
         columnGap: 12
       },

@@ -8,6 +8,18 @@ use App\Core\DataTableRequest;
 
 final class PreventivePlanRepository extends Repository
 {
+    /**
+     * Plan « à échéance » : date dans l'horizon (jours), ou compteur (heures, km) entré dans les derniers 10 % de
+     * l'intervalle — même règle que l'alerte compteurs (MeterForecast::ALERT_RATIO), pour préparer l'OT à l'avance.
+     */
+    public static function dueCondition(string $horizonSql): string
+    {
+        $margin = 1 - \App\Domain\MeterForecast::ALERT_RATIO;
+
+        return "(p.next_due_date <= CURDATE() + INTERVAL $horizonSql DAY
+                 OR (p.next_due_hours IS NOT NULL AND e.hour_meter >= p.next_due_hours - CEIL(COALESCE(p.interval_hours, 0) * $margin))
+                 OR (p.next_due_km IS NOT NULL AND e.odometer_km >= p.next_due_km - CEIL(COALESCE(p.interval_km, 0) * $margin)))";
+    }
     public const SORTABLE = [
         'title' => 'p.title',
         'equipment' => 'e.code',
@@ -36,8 +48,7 @@ final class PreventivePlanRepository extends Repository
             $fp['f_equipment'] = (int) $filters['equipment_id'];
         }
         if (($filters['due'] ?? '') === '1') {
-            $where[] = '(p.next_due_date <= CURDATE() + INTERVAL 7 DAY OR (p.next_due_hours IS NOT NULL AND e.hour_meter >= p.next_due_hours)
-                     OR (p.next_due_km IS NOT NULL AND e.odometer_km >= p.next_due_km))';
+            $where[] = self::dueCondition((string) \App\Services\PreventiveService::DEFAULT_HORIZON_DAYS);
         }
         if (($filters['active'] ?? '1') !== 'all') {
             $where[] = 'p.is_active = 1';
@@ -108,9 +119,7 @@ final class PreventivePlanRepository extends Repository
                FROM preventive_plans p
                JOIN equipment e ON e.id = p.equipment_id AND e.is_archived = 0
               WHERE $scopeSql AND p.is_active = 1
-                AND (p.next_due_date <= CURDATE() + INTERVAL :horizon DAY
-                     OR (p.next_due_hours IS NOT NULL AND e.hour_meter >= p.next_due_hours)
-                     OR (p.next_due_km IS NOT NULL AND e.odometer_km >= p.next_due_km))
+                AND " . self::dueCondition(':horizon') . "
                 AND NOT EXISTS (SELECT 1 FROM work_orders w WHERE w.preventive_plan_id = p.id
                                    AND w.status IN ('open', 'in_progress', 'waiting_part'))
               ORDER BY p.next_due_date",
@@ -131,9 +140,7 @@ final class PreventivePlanRepository extends Repository
         return (int) $this->db->fetchValue(
             "SELECT COUNT(*) FROM preventive_plans p JOIN equipment e ON e.id = p.equipment_id
               WHERE $scopeSql $siteSql AND p.is_active = 1 AND e.is_archived = 0
-                AND (p.next_due_date <= CURDATE() + INTERVAL :horizon DAY
-                     OR (p.next_due_hours IS NOT NULL AND e.hour_meter >= p.next_due_hours)
-                     OR (p.next_due_km IS NOT NULL AND e.odometer_km >= p.next_due_km))",
+                AND " . self::dueCondition(':horizon'),
             $params
         );
     }

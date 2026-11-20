@@ -2583,4 +2583,6 @@ return [
     'dashboard.report_closing' => ':done clôture(s) faite(s) sur :expected attendue(s) (stock et coûts, par site)',
     'dashboard.report_trend' => 'Évolution sur 6 mois',
     'dashboard.report_month' => 'Mois',
+    'js.wo_doc.plan' => 'Plan préventif',
+    'js.wo_doc.plan_due' => 'Échéance du plan',
 ];

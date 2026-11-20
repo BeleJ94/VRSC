@@ -33,6 +33,19 @@ test('document PDF de liste : paysage, en-tête répété, pagination', () => {
   assert.equal(doc.styles.th.fillColor, '#1F4E79');
 });
 
+test('bon de travail PDF : OT préventif ouvert avec plan et seuils d’échéance', () => {
+  const wo = {
+    reference: 'OT-2026-00300', title: 'Vidange 250 h', equipment_code: 'KOL-ADT-01', type: 'preventive', status: 'open',
+    plan_title: 'Vidange 250 h', plan_due_date: '2026-12-01', plan_due_hours: 8750, plan_due_km: null
+  };
+  const flat = JSON.stringify(Exporter.workOrderDocDefinition(wo, [], t, 'fr').content);
+  assert.match(flat, /Plan préventif/);
+  assert.match(flat, /Échéance du plan/);
+  assert.match(flat, /8\D750 h/);
+  const done = JSON.stringify(Exporter.workOrderDocDefinition({ ...wo, status: 'done' }, [], t, 'fr').content);
+  assert.doesNotMatch(done, /Échéance du plan/, 'OT clôturé : le plan a déjà avancé au cycle suivant');
+});
+
 test('bon de travail PDF : informations et total des pièces', () => {
   const wo = {
     reference: 'OT-2026-00042', title: 'Fuite hydraulique', equipment_code: 'CH-01', equipment_name: 'Chariot', site: 'Lyon',

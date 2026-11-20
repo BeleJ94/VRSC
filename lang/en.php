@@ -2563,4 +2563,6 @@ return [
     'dashboard.report_closing' => ':done of :expected closing(s) done (stock and costs, per site)',
     'dashboard.report_trend' => '6-month trend',
     'dashboard.report_month' => 'Month',
+    'js.wo_doc.plan' => 'Preventive plan',
+    'js.wo_doc.plan_due' => 'Plan due',
 ];
