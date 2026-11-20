@@ -55,6 +55,8 @@
 
   function loadPdfMake() {
     return loadScript(config.assets.pdfmake).then(function () { return loadScript(config.assets.vfs); })
+      // Logo VRSC chargé avec pdfmake : il figure en tête de tous les PDF générés.
+      .then(function () { return Promise.resolve(loadLogo()).then(function (svg) { if (svg) Exporter.setLogo(svg); }); })
       .then(function () { return window.pdfMake; });
   }
 

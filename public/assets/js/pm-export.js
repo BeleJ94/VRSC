@@ -1223,14 +1223,64 @@
     return node;
   }
 
+  // --- Logo VRSC en tête de tous les PDF ----------------------------------------------
+  var brandLogo = null;
+
+  /** Logo (SVG) utilisé en tête des PDF ; chargé une fois par le navigateur. */
+  function setLogo(svg) {
+    brandLogo = svg || null;
+  }
+
+  /** Largeur utile d'une page (points) selon le format, l'orientation et les marges. */
+  function usableWidth(doc) {
+    var sizes = { A4: [595.28, 841.89], A3: [841.89, 1190.55] };
+    var size = sizes[doc.pageSize] || sizes.A4;
+    var width = doc.pageOrientation === 'landscape' ? size[1] : size[0];
+    var m = doc.pageMargins === undefined ? 40 : doc.pageMargins;
+    var left = Array.isArray(m) ? m[0] : m;
+    var right = Array.isArray(m) ? (m.length === 2 ? m[0] : m[2]) : m;
+    return Math.round(width - left - right);
+  }
+
+  /** Le document affiche-t-il déjà le logo (rapports exécutifs) ? */
+  function hasLogo(doc) {
+    return JSON.stringify((doc.content || []).slice(0, 2)).indexOf('"svg"') !== -1;
+  }
+
+  /**
+   * Ajoute le bandeau VRSC (logo, « ETHAN VRSC · VRSC SARL », filet bleu et orange) en tête de la première page,
+   * sauf si le document l'a déjà ou le refuse (noBrand). Le document d'origine n'est pas modifié.
+   */
+  function brandDocument(doc, logo) {
+    var svg = logo === undefined ? brandLogo : logo;
+    if (!svg || !doc || doc.noBrand || !Array.isArray(doc.content) || hasLogo(doc)) return doc;
+    var width = usableWidth(doc);
+    var band = {
+      stack: [
+        { columns: [
+          { svg: svg, width: 92 },
+          { text: 'ETHAN VRSC · VRSC SARL', alignment: 'right', fontSize: 7, color: '#5B6573', margin: [0, 12, 0, 0] }
+        ] },
+        { canvas: [
+          { type: 'line', x1: 0, y1: 0, x2: width, y2: 0, lineWidth: 1.2, lineColor: '#0D5487' },
+          { type: 'line', x1: 0, y1: 0, x2: 80, y2: 0, lineWidth: 1.2, lineColor: '#F5A369' }
+        ], margin: [0, 6, 0, 10] }
+      ]
+    };
+    var out = {};
+    Object.keys(doc).forEach(function (k) { out[k] = doc[k]; });
+    out.content = [band].concat(doc.content);
+    return out;
+  }
+
   /** Génère et télécharge un PDF après normalisation des caractères non pris en charge par la police. */
   function downloadPdf(pdfMake, doc, filename) {
-    pdfMake.createPdf(pdfSafe(doc)).download(filename);
+    pdfMake.createPdf(pdfSafe(brandDocument(doc))).download(filename);
   }
 
   /** PDF généré en Blob (aperçu dans une modale avant téléchargement ou impression). */
   function pdfBlob(pdfMake, doc) {
-    return new Promise(function (resolve) { pdfMake.createPdf(pdfSafe(doc)).getBlob(resolve); });
+    return new Promise(function (resolve) { pdfMake.createPdf(pdfSafe(brandDocument(doc))).getBlob(resolve); });
   }
 
   // --- Navigateur -----------------------------------------------------------
@@ -1280,6 +1330,8 @@
     exportExcel: exportExcel,
     exportPdf: exportPdf,
     pdfSafe: pdfSafe,
+    setLogo: setLogo,
+    brandDocument: brandDocument,
     downloadPdf: downloadPdf,
     pdfBlob: pdfBlob,
     planningMatrix: planningMatrix,
