@@ -2655,4 +2655,8 @@ Graisser les articulations',
     'preventive.open_wo' => 'OT en cours : :reference',
     'validation.plan_has_open_wo' => 'Ce plan a déjà un OT ouvert (:reference) : terminez-le ou annulez-le avant d\'en créer un autre.',
     'validation.plan_inactive' => 'Ce plan est inactif : activez-le avant de créer un OT.',
+    'js.saving' => 'Enregistrement…',
+    'js.saved' => 'Enregistré.',
+    'js.confirm_action' => 'Confirmez-vous cette action ?',
+    'js.ok' => 'OK',
 ];

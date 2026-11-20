@@ -10,6 +10,8 @@ if ($wo['completed_at']) {
     $duration = (int) round((strtotime($wo['completed_at']) - strtotime($wo['reported_at'])) / 3600);
 }
 ?>
+<?php /* Envois de la page en AJAX : confirmation, puis seul le contenu est rafraîchi (voir app.js). */ ?>
+<div data-ajax-page hidden></div>
 <div class="wo-hero wo-hero--<?= e($wo['priority']) ?>">
     <div class="wo-hero__main">
         <div class="wo-hero__ref"><?= e($wo['reference']) ?> · <?= e(label('wo_type', $wo['type'])) ?></div>

@@ -2635,4 +2635,8 @@ Grease the joints',
     'preventive.open_wo' => 'Open work order: :reference',
     'validation.plan_has_open_wo' => 'This plan already has an open work order (:reference): complete or cancel it before creating another one.',
     'validation.plan_inactive' => 'This plan is inactive: activate it before creating a work order.',
+    'js.saving' => 'Saving…',
+    'js.saved' => 'Saved.',
+    'js.confirm_action' => 'Do you confirm this action?',
+    'js.ok' => 'OK',
 ];

@@ -28,7 +28,7 @@ $anomalies = count(array_filter($checks, static fn (array $c): bool => $c['statu
                     </div>
                 </div>
                 <?php if ($canExecute): ?>
-                    <form method="post" action="<?= e(url('/work-orders/' . $wo['id'] . '/checks/' . $c['id'])) ?>" class="wochk__form" data-no-confirm>
+                    <form method="post" action="<?= e(url('/work-orders/' . $wo['id'] . '/checks/' . $c['id'])) ?>" class="wochk__form" data-confirm-kind="apply" data-confirm-title="<?= e($c['label']) ?>">
                         <?= csrf_field() ?><input type="hidden" name="back" value="<?= e($back) ?>">
                         <input type="text" name="note" class="input input--sm" maxlength="255" value="<?= e($c['note'] ?? '') ?>" placeholder="<?= e(t('work_orders.check_note_placeholder')) ?>" aria-label="<?= e(t('work_orders.check_note')) ?>">
                         <div class="wochk__choices" role="group" aria-label="<?= e($c['label']) ?>">

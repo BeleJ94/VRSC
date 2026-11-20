@@ -2101,3 +2101,5 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
 .uncovered .table-wrap { padding: 0 16px 12px; }
 .covered-note { display: flex; gap: 8px; align-items: center; margin: 0 0 var(--space-3); padding: 8px 12px; border-radius: 8px; background: #ECFDF3; color: #067647; font-size: 13px; }
 .covered-note [data-lucide] { width: 16px; height: 16px; }
+.swal-errors { text-align: left; margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+.alert__list { margin: 4px 0 0; padding-left: 18px; }

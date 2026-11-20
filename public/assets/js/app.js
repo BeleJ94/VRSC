@@ -187,7 +187,10 @@
   }
 
   function actionTitle(form, submitter) {
-    var text = form.dataset.confirmTitle || (submitter && clean(submitter.textContent || submitter.value || submitter.title || submitter.getAttribute('aria-label')));
+    var choice = submitter && clean(submitter.textContent || submitter.value || submitter.title || submitter.getAttribute('aria-label'));
+    // Titre déclaré + bouton choisi parmi plusieurs (ex. opération d'OT : « Vidange — Anomalie »).
+    if (form.dataset.confirmTitle && choice && form.querySelectorAll('button[type=submit]').length > 1) return form.dataset.confirmTitle + ' — ' + choice;
+    var text = form.dataset.confirmTitle || choice;
     var page = clean($('.page-header h1').first().text());
     return text && page ? text + ' · ' + page : (text || page || t('js.confirm_title'));
   }
@@ -234,7 +237,7 @@
     return Swal.fire({
       title: options.title || actionTitle(form, options.submitter),
       html: (message ? '<p class="confirm-lead">' + Core.escapeHtml(message) + '</p>' : '')
-        + (list ? '<dl class="confirm-summary">' + list + '</dl>' + more : (message ? '' : '<p class="confirm-lead">' + Core.escapeHtml(t('js.confirm_no_fields')) + '</p>')),
+        + (list ? '<dl class="confirm-summary">' + list + '</dl>' + more : (message ? '' : '<p class="confirm-lead">' + Core.escapeHtml(t(document.querySelector('[data-ajax-page]') ? 'js.confirm_action' : 'js.confirm_no_fields')) + '</p>')),
       customClass: {
         popup: 'confirm-popup confirm-popup--' + kind,
         actions: 'confirm-actions',
@@ -256,9 +259,62 @@
   window.PM.confirmSubmit = confirmSubmit;
   window.PM.summaryRows = summaryRows;
 
+  /**
+   * Page en mode AJAX ([data-ajax-page], ex. fiche OT) : envoi du formulaire en arrière-plan, puis seul le contenu
+   * (#main) est remplacé par la page renvoyée ; le message (succès ou erreur) s'affiche en notification SweetAlert.
+   * Si le serveur renvoie vers une autre page (ex. OT supprimé), la navigation se fait normalement.
+   */
+  function ajaxPageSubmit(form, submitter) {
+    var data = new FormData(form);
+    if (submitter && submitter.name) data.append(submitter.name, submitter.value);
+    Swal.fire({ title: t('js.saving'), allowOutsideClick: false, showConfirmButton: false, customClass: { popup: 'confirm-popup confirm-popup--busy' }, didOpen: function () { Swal.showLoading(); } });
+    var scroll = window.scrollY;
+    return fetch(form.getAttribute('action'), { method: 'POST', body: data, credentials: 'same-origin' })
+      .then(function (res) { return res.text().then(function (html) { return { res: res, html: html }; }); })
+      .then(function (r) {
+        var doc = new DOMParser().parseFromString(r.html, 'text/html');
+        var main = doc.getElementById('main');
+        var target = new URL(r.res.url, window.location.href);
+        if (!r.res.ok || !main) {
+          var reason = doc.querySelector('h1, .alert--error');
+          throw new Error(reason ? clean(reason.textContent) : t('js.error'));
+        }
+        if (!main.querySelector('[data-ajax-page]') || target.pathname !== window.location.pathname) {
+          window.location.href = r.res.url;
+          return;
+        }
+        var flash = { success: main.querySelector('[data-flash="success"]'), error: main.querySelector('[data-flash="error"]') };
+        var errors = [];
+        if (flash.error) flash.error.querySelectorAll('li').forEach(function (el) { errors.push(clean(el.textContent)); });
+        if (flash.success) flash.success.remove();
+        if (flash.error) flash.error.remove();
+        document.getElementById('main').innerHTML = main.innerHTML;
+        if (doc.title) document.title = doc.title;
+        window.scrollTo(0, scroll);
+        icons();
+        $(document).trigger('pm:content', [document.getElementById('main')]);
+        if (flash.error) {
+          var detail = errors.filter(function (e, i) { return e && errors.indexOf(e) === i; });
+          var single = detail.length === 1 ? detail.pop() : null;
+          Swal.fire({
+            icon: 'error', title: single || clean((flash.error.querySelector('[data-flash-message]') || flash.error).textContent),
+            html: detail.length ? '<ul class="swal-errors">' + detail.map(function (e) { return '<li>' + Core.escapeHtml(e) + '</li>'; }).join('') + '</ul>' : '',
+            customClass: { popup: 'confirm-popup', confirmButton: 'btn btn--primary' }, buttonsStyling: false, confirmButtonText: t('js.ok')
+          });
+        } else {
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: flash.success ? clean(flash.success.textContent) : t('js.saved'), showConfirmButton: false, timer: 2600, timerProgressBar: true });
+        }
+      })
+      .catch(function (e) {
+        Swal.fire({ icon: 'error', title: t('js.error'), text: e && e.message && e.message !== t('js.error') ? e.message : '', customClass: { popup: 'confirm-popup', confirmButton: 'btn btn--primary' }, buttonsStyling: false, confirmButtonText: t('js.ok') });
+      });
+  }
+
   /** Envoi après confirmation, en conservant le bouton utilisé (ex. transition d'OT choisie). */
   function submitConfirmed(form, submitter) {
-    if (submitter && submitter.name) {
+    if (document.querySelector('[data-ajax-page]') && (form.getAttribute('method') || '').toLowerCase() === 'post') {
+      return ajaxPageSubmit(form, submitter);
+    }    if (submitter && submitter.name) {
       $('<input type="hidden">').attr('name', submitter.name).val(submitter.value).appendTo(form);
     }
     form.dataset.confirmed = '1';
