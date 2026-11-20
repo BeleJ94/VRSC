@@ -22,3 +22,27 @@ test('ne double pas le logo et respecte noBrand ou l’absence de logo', () => {
   const plain = { content: [] };
   assert.strictEqual(Exporter.brandDocument(plain, null), plain);
 });
+
+test('Excel : logo posé à droite du bandeau, version blanche sur fond foncé', () => {
+  const placed = [];
+  const sheet = (fill) => ({
+    model: { merges: ['A1:D1'] }, columnCount: 6,
+    rows: { 1: { height: 24 } },
+    getRow(n) { return this.rows[n]; },
+    getCell() { return { fill }; },
+    getColumn() { return { width: 20 }; },
+    addImage(id, pos) { placed.push({ id, pos }); }
+  });
+  const images = [];
+  const wb = {
+    worksheets: [sheet(null), sheet({ fgColor: { argb: 'FF1F4E79' } })],
+    addImage(img) { images.push(img); return images.length - 1; }
+  };
+  Exporter.brandWorkbook(wb, { color: 'C', white: 'W', ratio: 3.2 });
+  assert.deepStrictEqual(images.map((i) => i.base64), ['C', 'W']);
+  assert.strictEqual(wb.worksheets[0].rows[1].height, 30);
+  assert.ok(placed[0].pos.tl.col > 2 && placed[0].pos.tl.col < 4, 'ancré dans la dernière colonne du bandeau (D)');
+  assert.strictEqual(placed[1].id, 1);
+  const none = { worksheets: [] };
+  assert.strictEqual(Exporter.brandWorkbook(none, null), none);
+});

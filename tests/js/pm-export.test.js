@@ -85,11 +85,12 @@ test('classeur Excel : en-tête stylé, filtre automatique, largeurs bornées', 
   const sheet = wb.sheets[0];
 
   assert.equal(sheet.name.length <= 31, true, 'Nom de feuille ≤ 31 caractères (limite Excel)');
-  assert.equal(sheet.rows.length, 3);
-  assert.equal(sheet.rows[0].font.bold, true);
-  assert.equal(sheet.rows[0].fill.fgColor.argb, 'FF1F4E79');
-  assert.deepEqual(sheet.autoFilter, { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } });
-  assert.equal(sheet.opts.views[0].ySplit, 1);
+  assert.equal(sheet.rows.length, 6);
+  assert.equal(sheet.rows[0].values[0], 'Ordres de travail et engins du parc');
+  assert.equal(sheet.rows[3].font.bold, true);
+  assert.equal(sheet.rows[3].fill.fgColor.argb, 'FF1F4E79');
+  assert.deepEqual(sheet.autoFilter, { from: { row: 4, column: 1 }, to: { row: 4, column: 7 } });
+  assert.equal(sheet.opts.views[0].ySplit, 4);
   assert.equal(sheet.columns[1].width, 60);
   assert.ok(sheet.columns[0].width >= 10);
 });

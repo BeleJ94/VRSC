@@ -496,6 +496,41 @@
     return $.get(config.assets.logo, null, null, 'text').then(function (svg) { logoSvg = svg; return svg; }, function () { return null; });
   }
 
+  /** SVG → PNG (base64) à la hauteur donnée ; null si le navigateur ne peut pas le dessiner. */
+  function svgToPng(svg, height) {
+    return new Promise(function (resolve) {
+      if (!svg) return resolve(null);
+      var img = new Image();
+      var url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      img.onload = function () {
+        var ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 3.2;
+        var canvas = document.createElement('canvas');
+        canvas.height = height;
+        canvas.width = Math.round(height * ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve({ data: canvas.toDataURL('image/png'), ratio: ratio });
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  var excelLogoReady = null;
+  /** Charge ExcelJS et le logo VRSC (couleur et blanc) en PNG : il figure en tête de tous les classeurs. */
+  function loadExcelJs() {
+    if (!excelLogoReady) {
+      var whiteUrl = config.assets.logo ? config.assets.logo.replace('logo-vrsc.svg', 'logo-vrsc-white.svg') : null;
+      var white = whiteUrl ? $.get(whiteUrl, null, null, 'text').then(null, function () { return $.Deferred().resolve(null).promise(); }) : null;
+      excelLogoReady = Promise.all([Promise.resolve(loadLogo()), Promise.resolve(white)])
+        .then(function (svgs) { return Promise.all([svgToPng(svgs[0], 120), svgToPng(svgs[1], 120)]); })
+        .then(function (pngs) {
+          if (pngs[0]) Exporter.setExcelLogo({ color: pngs[0].data, white: pngs[1] ? pngs[1].data : null, ratio: pngs[0].ratio });
+        }, function () {});
+    }
+    return loadScript(config.assets.exceljs).then(function () { return excelLogoReady; }).then(function () { return window.ExcelJS; });
+  }
+
   function exportTable(table, def, source, title, kind, button, context) {
     var params = $.extend(table.ajax.params(), { start: 0, length: -1, draw: 0 });
     button.disabled = true;
@@ -518,7 +553,7 @@
           }
         }
         if (kind === 'excel') {
-          return loadScript(config.assets.exceljs).then(function () { return Exporter.exportExcel(window.ExcelJS, title, data, meta); });
+          return loadExcelJs().then(function (ExcelJS) { return Exporter.exportExcel(ExcelJS, title, data, meta); });
         }
         return loadPdfMake().then(function (pdfMake) { Exporter.exportPdf(pdfMake, title, data, meta); });
       })
@@ -730,7 +765,7 @@
       var button = this;
       button.disabled = true;
       var job = this.dataset.planningExport === 'excel'
-        ? loadScript(config.assets.exceljs).then(function () { return Exporter.exportPlanningExcel(window.ExcelJS, planning); })
+        ? loadExcelJs().then(function (ExcelJS) { return Exporter.exportPlanningExcel(ExcelJS, planning); })
         : loadPdfMake().then(function (pdfMake) { Exporter.exportPlanningPdf(pdfMake, planning); });
       Promise.resolve(job).catch(function () { alertError(); }).then(function () { button.disabled = false; });
     });
@@ -758,7 +793,7 @@
       });
       button.disabled = true;
       var job = button.dataset.reportExport === 'excel'
-        ? loadScript(config.assets.exceljs).then(function () { return Exporter.exportReportExcel(window.ExcelJS, report, images, locale); })
+        ? loadExcelJs().then(function (ExcelJS) { return Exporter.exportReportExcel(ExcelJS, report, images, locale); })
         : loadPdfMake().then(function (pdfMake) { Exporter.exportReportPdf(pdfMake, report, images, locale); });
       Promise.resolve(job).catch(function () { alertError(); }).then(function () { button.disabled = false; });
     });

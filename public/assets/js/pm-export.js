@@ -45,9 +45,24 @@
     var wb = new ExcelJS.Workbook();
     wb.creator = 'ETHAN VRSC';
     wb.created = meta && meta.date ? meta.date : new Date();
+    var cols = Math.max(1, data.headers.length);
     var sheet = wb.addWorksheet(String(title).slice(0, 31) || 'Export', {
-      views: [{ state: 'frozen', ySplit: 1 }]
+      views: [{ state: 'frozen', ySplit: 4 }],
+      pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
     });
+    // Bandeau : titre (logo VRSC à droite, voir brandWorkbook), date et nombre de lignes.
+    sheet.addRow([String(title)]);
+    sheet.getRow(1).font = { bold: true, size: 15, color: { argb: 'FF0D5487' } };
+    sheet.getRow(1).height = 30;
+    var created = wb.created instanceof Date ? wb.created : new Date();
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    sheet.addRow(['ETHAN VRSC · ' + pad(created.getDate()) + '/' + pad(created.getMonth() + 1) + '/' + created.getFullYear() + ' · ' + data.body.length]);
+    sheet.getRow(2).font = { size: 9, color: { argb: 'FF5B6573' } };
+    sheet.addRow([]);
+    if (sheet.mergeCells && cols > 1) {
+      sheet.mergeCells(1, 1, 1, cols);
+      sheet.mergeCells(2, 1, 2, cols);
+    }
     sheet.addRow(data.headers);
     data.body.forEach(function (r, i) {
       var row = sheet.addRow(r.map(function (text, c) {
@@ -61,11 +76,11 @@
         cell.alignment = { horizontal: 'right' };
       });
     });
-    var header = sheet.getRow(1);
+    var header = sheet.getRow(4);
     header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
     header.alignment = { vertical: 'middle' };
-    sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: Math.max(1, data.headers.length) } };
+    sheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: cols } };
     sheet.columns.forEach(function (col, i) {
       var max = String(data.headers[i] || '').length;
       data.body.forEach(function (r) { max = Math.max(max, String(r[i] || '').length); });
@@ -131,7 +146,7 @@
     });
     sheet.addRow(['VRSC — ' + title]);
     sheet.getRow(1).font = { bold: true, size: 15, color: { argb: 'FF0D5487' } };
-    sheet.getRow(1).height = 24;
+    sheet.getRow(1).height = 30;
     sheet.addRow([[meta.filters, meta.subtitle, meta.author].filter(Boolean).join(' · ')]);
     sheet.getRow(2).font = { size: 9, color: { argb: 'FF5B6573' } };
     sheet.addRow([]);
@@ -1190,7 +1205,7 @@
   }
 
   function exportReportExcel(ExcelJS, payload, images, locale) {
-    return buildReportWorkbook(ExcelJS, payload, images, locale).xlsx.writeBuffer().then(function (buffer) {
+    return brandWorkbook(buildReportWorkbook(ExcelJS, payload, images, locale)).xlsx.writeBuffer().then(function (buffer) {
       saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
         Core.exportFileName(payload.labels.title, 'xlsx'));
     });
@@ -1221,6 +1236,66 @@
       return out;
     }
     return node;
+  }
+
+  // --- Logo VRSC dans les classeurs Excel ------------------------------------------------
+  // Excel n'affiche pas le SVG : le navigateur fournit deux PNG (couleur, blanc pour les bandeaux foncés).
+  var excelLogo = null;
+
+  function setExcelLogo(logo) {
+    excelLogo = logo && logo.color ? logo : null;
+  }
+
+  /** Couleur de fond (argb) foncée ? Le logo blanc est alors utilisé. */
+  function isDark(argb) {
+    if (!argb || argb.length < 8) return false;
+    var r = parseInt(argb.substr(2, 2), 16), g = parseInt(argb.substr(4, 2), 16), b = parseInt(argb.substr(6, 2), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+  }
+
+  /** Dernière colonne du bandeau de la ligne 1 (fusion A1:…1), sinon dernière colonne utilisée. */
+  function bannerLastCol(sheet) {
+    var merges = (sheet.model && sheet.model.merges) || [];
+    for (var i = 0; i < merges.length; i++) {
+      var m = /^A1:([A-Z]+)1$/.exec(merges[i]);
+      if (m) return m[1].split('').reduce(function (n, ch) { return n * 26 + ch.charCodeAt(0) - 64; }, 0);
+    }
+    return Math.max(1, sheet.columnCount || 1);
+  }
+
+  /**
+   * Pose le logo VRSC à droite du bandeau titre (ligne 1) de chaque feuille, sans décaler aucune cellule :
+   * formules, filtres, liens internes et volets figés restent intacts.
+   */
+  function brandWorkbook(wb, logo) {
+    var lg = logo === undefined ? excelLogo : logo;
+    if (!lg || !wb || typeof wb.addImage !== 'function') return wb;
+    var ids = {};
+    (wb.worksheets || []).forEach(function (sheet) {
+      var row = sheet.getRow(1);
+      if (!row || (row.height || 15) < 30) row.height = 30;
+      var heightPx = Math.round((row.height || 30) * 96 / 72);
+      var h = Math.min(heightPx - 8, 34);
+      var w = Math.round(h * (lg.ratio || 3.2));
+      var fill = sheet.getCell(1, 1).fill;
+      var dark = fill && fill.fgColor && isDark(fill.fgColor.argb) && lg.white;
+      var key = dark ? 'white' : 'color';
+      if (!ids[key]) ids[key] = wb.addImage({ base64: lg[key], extension: 'png' });
+      // Ancre : on remonte depuis la dernière colonne jusqu'à disposer de la largeur du logo (+ marge).
+      var need = w + 10;
+      var col = bannerLastCol(sheet);
+      var acc = 0;
+      var px = 0;
+      while (col >= 1) {
+        px = Math.round(((sheet.getColumn(col).width || 9) * 7) + 5);
+        if (acc + px >= need) break;
+        acc += px;
+        col--;
+      }
+      var tlCol = col < 1 ? 0 : (col - 1) + (acc + px - need) / px;
+      sheet.addImage(ids[key], { tl: { col: tlCol, row: (heightPx - h) / 2 / heightPx }, ext: { width: w, height: h }, editAs: 'oneCell' });
+    });
+    return wb;
   }
 
   // --- Logo VRSC en tête de tous les PDF ----------------------------------------------
@@ -1296,7 +1371,7 @@
   }
 
   function exportExcel(ExcelJS, title, data, meta) {
-    var wb = meta && meta.executive ? buildExecutiveWorkbook(ExcelJS, title, data, meta) : buildWorkbook(ExcelJS, title, data, meta);
+    var wb = brandWorkbook(meta && meta.executive ? buildExecutiveWorkbook(ExcelJS, title, data, meta) : buildWorkbook(ExcelJS, title, data, meta));
     return wb.xlsx.writeBuffer().then(function (buffer) {
       saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
         Core.exportFileName(title, 'xlsx'));
@@ -1304,7 +1379,7 @@
   }
 
   function exportPlanningExcel(ExcelJS, payload) {
-    return buildPlanningWorkbook(ExcelJS, payload, planningMatrix(payload)).xlsx.writeBuffer().then(function (buffer) {
+    return brandWorkbook(buildPlanningWorkbook(ExcelJS, payload, planningMatrix(payload))).xlsx.writeBuffer().then(function (buffer) {
       saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
         Core.exportFileName(payload.labels.title, 'xlsx'));
     });
@@ -1331,6 +1406,8 @@
     exportPdf: exportPdf,
     pdfSafe: pdfSafe,
     setLogo: setLogo,
+    setExcelLogo: setExcelLogo,
+    brandWorkbook: brandWorkbook,
     brandDocument: brandDocument,
     downloadPdf: downloadPdf,
     pdfBlob: pdfBlob,
