@@ -2628,4 +2628,5 @@ Grease the joints',
     'preventive.uncovered_title' => ':count equipment without a preventive plan',
     'preventive.uncovered_hint' => 'Active equipment with no active plan: no alert and no preventive work order will be issued.',
     'preventive.create_for' => 'Create a plan',
+    'preventive.all_covered' => 'Every active equipment in your scope has an active preventive plan.',
 ];

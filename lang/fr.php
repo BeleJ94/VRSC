@@ -2648,4 +2648,5 @@ Graisser les articulations',
     'preventive.uncovered_title' => ':count engin(s) sans plan préventif',
     'preventive.uncovered_hint' => 'Engins actifs sans aucun plan actif : ils ne recevront ni alerte ni OT préventif.',
     'preventive.create_for' => 'Créer un plan',
+    'preventive.all_covered' => 'Tous les engins actifs de votre périmètre ont un plan préventif actif.',
 ];

@@ -142,6 +142,10 @@ final class StockAndPreventiveTest extends DatabaseTestCase
         foreach (['CH-PLAN', 'VL-ARCH', 'VL-AUTRE'] as $hidden) {
             self::assertStringNotContainsString($hidden, $page, "$hidden : couvert, archivé ou hors périmètre");
         }
+        self::assertStringNotContainsString('Tous les engins actifs', $page);
+
+        $this->db->execute("UPDATE equipment SET is_archived = 1 WHERE code = 'VL-SANS'");
+        self::assertStringContainsString('Tous les engins actifs de votre périmètre ont un plan préventif actif.', $this->http($session, 'GET', '/preventive')->body);
     }
 
     public function testPlanUpdateLogsOnlyChangedFields(): void

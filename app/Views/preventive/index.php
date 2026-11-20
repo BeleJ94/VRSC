@@ -41,6 +41,8 @@
             </table>
         </div>
     </details>
+<?php else: ?>
+    <div class="covered-note"><i data-lucide="shield-check"></i><?= e(t('preventive.all_covered')) ?></div>
 <?php endif; ?>
 <section class="card">
     <form class="filters" data-filters-for="preventive">
