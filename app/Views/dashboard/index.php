@@ -1,6 +1,17 @@
 <?php
-/** @var array $stats  @var array $sites  @var int|null $siteId  @var array $siteCards */
-$view->share('pageScripts', ['vendor/chart.umd.min.js', 'js/dashboard.js']);
+/**
+ * Tableau de bord : en-tête commun (onglets, période, site, « À traiter ») puis la vue du profil.
+ * @var string $dashView  @var array $views  @var array|null $period  @var array $todo  @var array $sites  @var int|null $siteId
+ * @var array $stats  @var array $siteCards (vue maintenance)  @var array $dash (vues exécutive et finance)
+ */
+$view->share('pageScripts', $dashView === 'maintenance' ? ['vendor/chart.umd.min.js', 'js/dashboard.js', 'js/dashboard-views.js'] : ['js/dashboard-views.js']);
+if ($dashView !== 'maintenance'):
+    echo $view->partial('dashboard/_header', ['dashView' => $dashView, 'views' => $views, 'period' => $period, 'sites' => $sites, 'siteId' => $siteId, 'todo' => $todo]);
+    if ($dashView === 'executive' || $dashView === 'finance') {
+        echo $view->partial('dashboard/' . $dashView, ['dash' => $dash, 'period' => $period, 'siteId' => $siteId]);
+    }
+    return;
+endif;
 $eq = $stats['equipment'];
 $wo = $stats['work_orders'];
 $siteQuery = $siteId ? ['site_id' => $siteId] : [];
@@ -18,18 +29,7 @@ foreach (\App\Domain\EquipmentStatus::cases() as $st) {
 }
 $availClass = $eq['availability'] === null ? '' : ($eq['availability'] >= 85 ? 'good' : ($eq['availability'] >= 70 ? 'warn' : 'bad'));
 ?>
-<div class="page-header">
-    <div class="page-title">
-        <span class="page-title__icon"><i data-lucide="layout-dashboard"></i></span>
-        <div>
-            <h1><?= e(t('nav.dashboard')) ?></h1>
-            <div class="page-title__meta"><span><i data-lucide="mouse-pointer-click"></i><?= e(t('dashboard.drill_hint')) ?></span></div>
-        </div>
-    </div>
-    <form method="get" action="<?= e(url('/')) ?>" class="filters" style="margin:0">
-        <?= $view->partial('partials/site_filter', ['sites' => $sites, 'selected' => $siteId]) ?>
-    </form>
-</div>
+<?= $view->partial('dashboard/_header', ['dashView' => $dashView, 'views' => $views, 'period' => $period, 'sites' => $sites, 'siteId' => $siteId, 'todo' => $todo]) ?>
 
 <div class="kpis kpis--compact kpis--8">
     <button type="button" class="kpi kpi--button kpi--hero"<?= drill('equipment', '/equipment/data', t('dashboard.availability'), $sp([]), '/equipment', '/equipment/{id}', $eqChips) ?>>

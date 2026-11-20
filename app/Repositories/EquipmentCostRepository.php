@@ -114,6 +114,34 @@ final class EquipmentCostRepository extends Repository
         return $this->paginate($dt, 'x.*', $source, [], $params, $where, $fp, ['x.code', 'x.name']);
     }
 
+    /**
+     * Coûts imputés aux engins entre deux dates, lus dans les pièces sources (même source que le rapport mensuel),
+     * regroupés par mois, par site ou par engin. Un montant inconnu est compté à part (missing), jamais comme zéro.
+     *
+     * @param 'month'|'site'|'equipment' $group
+     */
+    public function costsBetween(string $from, string $to, ?int $siteId, string $group, int $limit = 0): array
+    {
+        [$scopeSql, $params] = $this->scope->clause('c.site_id');
+        $key = ['month' => "DATE_FORMAT(c.cost_date, '%Y-%m')", 'site' => 'c.site_id', 'equipment' => 'c.equipment_id'][$group];
+        $site = '';
+        if ($siteId !== null) {
+            $site = ' AND c.site_id = :f_site';
+            $params['f_site'] = $siteId;
+        }
+        $extra = $group === 'equipment' ? ', e.code, e.name, s.name AS site' : '';
+        $join = $group === 'equipment' ? ' JOIN equipment e ON e.id = c.equipment_id JOIN sites s ON s.id = e.site_id' : '';
+        $groupBy = $group === 'equipment' ? 'c.equipment_id, e.code, e.name, s.name' : 'k';
+
+        return $this->db->fetchAll(
+            "SELECT $key AS k, COALESCE(SUM(c.amount), 0) AS total, SUM(c.amount IS NULL) AS missing, SUM(IF(c.kind = 'fuel', COALESCE(c.amount, 0), 0)) AS fuel$extra
+               FROM " . $this->lines() . " c$join
+              WHERE c.cost_date BETWEEN :f AND :t AND $scopeSql$site
+              GROUP BY $groupBy ORDER BY " . ($group === 'equipment' ? 'total DESC' : 'k') . ($limit > 0 ? ' LIMIT ' . $limit : ''),
+            ['f' => $from, 't' => $to] + $params
+        );
+    }
+
     /** Totaux du rapport d'une période (dans le périmètre, site éventuel). */
     public function monthlyTotals(string $period, ?int $siteId = null): array
     {
