@@ -2050,3 +2050,7 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
   .xtrack li { grid-template-columns: 1fr; }
   .xtrack__when { text-align: left; }
 }
+
+/* Rapport PDF de direction */
+.xdash-report { min-height: 34px; white-space: nowrap; }
+.xdash-report [data-lucide] { width: 15px; height: 15px; }

@@ -2577,4 +2577,10 @@ return [
     'dashboard.step_executed' => 'Exécuté',
     'dashboard.my_payments' => 'Mes décaissements',
     'dashboard.no_my_payment' => 'Aucune demande de décaissement.',
+    'dashboard.report_button' => 'Rapport PDF',
+    'dashboard.report_title' => 'Rapport de direction',
+    'dashboard.report_generated' => 'Généré le :date par :name',
+    'dashboard.report_closing' => ':done clôture(s) faite(s) sur :expected attendue(s) (stock et coûts, par site)',
+    'dashboard.report_trend' => 'Évolution sur 6 mois',
+    'dashboard.report_month' => 'Mois',
 ];

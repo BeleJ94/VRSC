@@ -628,6 +628,8 @@
   }
 
   window.PM.drill = openDrill;
+  window.PM.loadPdfMake = loadPdfMake;
+  window.PM.loadLogo = loadLogo;
 
   // ---------------------------------------------------------------- Fiche compacte d'un élément unique
   // Spécification : { title, subtitle, icon, fields: [[libellé, valeur, ton]], url, urlLabel, drill, drillLabel }

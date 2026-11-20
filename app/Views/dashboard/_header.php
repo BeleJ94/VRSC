@@ -30,6 +30,9 @@ $todoLabels = [
         </nav>
     <?php endif; ?>
     <form method="get" action="<?= e(url('/')) ?>" class="xdash-filters">
+        <?php if ($dashView === 'executive'): ?>
+            <button type="button" class="btn btn--sm xdash-report" data-exec-report><i data-lucide="file-text"></i><?= e(t('dashboard.report_button')) ?></button>
+        <?php endif; ?>
         <input type="hidden" name="view" value="<?= e($dashView) ?>">
         <?php if ($period !== null): ?>
             <label class="sr-only" for="dash-period"><?= e(t('fields.period')) ?></label>

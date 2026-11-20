@@ -2557,4 +2557,10 @@ return [
     'dashboard.step_executed' => 'Executed',
     'dashboard.my_payments' => 'My payment requests',
     'dashboard.no_my_payment' => 'No payment request.',
+    'dashboard.report_button' => 'PDF report',
+    'dashboard.report_title' => 'Management report',
+    'dashboard.report_generated' => 'Generated on :date by :name',
+    'dashboard.report_closing' => ':done of :expected closing(s) done (stock and costs, per site)',
+    'dashboard.report_trend' => '6-month trend',
+    'dashboard.report_month' => 'Month',
 ];

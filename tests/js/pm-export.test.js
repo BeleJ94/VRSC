@@ -205,3 +205,35 @@ test('lien de ligne fourni par le serveur : {!clé} conservé tel quel, jamais u
   assert.equal(Core.fillUrl('{!link}', { link: 'javascript:alert(1)' }), '#');
   assert.equal(Core.fillUrl('/x/{id}', { id: 'a/b' }), '/x/a%2Fb');
 });
+
+test('rapport de direction : une page A4 paysage, indicateurs, tableaux plafonnés, logo et pied de page', () => {
+  const kpi = (label, tone, delta) => ({ label, value: '1 000,00 $', delta, tone, hint: 'h', series: [1, 3, 2, 5, 4, 6] });
+  const rows = (n, cols) => Array.from({ length: n }, (_, i) => Array.from({ length: cols }, (_, c) => (c === 0 ? 'L' + i : String(c))));
+  const payload = {
+    title: 'Rapport de direction', subtitle: 'Année · Tous les sites', generated: 'Généré par X', confidential: 'Document interne',
+    kpis: [kpi('A', 'good', '+5,0 %'), kpi('B', 'bad', '-3,0 %'), kpi('C', 'neutral', null), kpi('D', 'flat', null), kpi('E', 'flat', null), kpi('F', 'good', '+1,0 %'), kpi('G', 'flat', null)],
+    sites: { title: 'Sites', headers: ['Site', 'Dispo', 'Coût', 'Payé', 'Stock', 'EDB'], rows: rows(12, 6).map((r) => r.concat(['good'])) },
+    top: { title: 'Top', headers: ['#', 'Engin', 'Site', 'Coût'], rows: rows(9, 4), note: 'n' },
+    trend: { title: 'Évolution', headers: ['Mois', 'E', 'P', 'C'], rows: rows(6, 4) },
+    alerts: { title: 'Alertes', empty: 'Aucune', rows: Array.from({ length: 10 }, (_, i) => ['Alerte ' + i, 'warn']) },
+    closing: { title: 'Clôtures', done: 3, expected: 8, text: '3 sur 8' }
+  };
+  const doc = Exporter.execReportDocDefinition(payload, '<svg/>');
+  assert.equal(doc.pageOrientation, 'landscape');
+  assert.equal(doc.pageSize, 'A4');
+  assert.equal(doc.content[0].columns[0].svg, '<svg/>');
+  assert.equal(doc.content[2].columns.length, 6, '6 indicateurs au plus');
+  const left = doc.content[3].columns[0].stack;
+  assert.equal(left[1].table.body.length, 9, 'En-tête + 8 sites au plus');
+  assert.equal(left[4].table.body.length, 6, 'En-tête + 5 engins au plus');
+  assert.equal(left[6].stack[1].table.body.length, 7, 'En-tête + 6 mois');
+  assert.equal(doc.content[3].columns[1].stack[1].stack.length, 7, '7 alertes au plus');
+  assert.match(doc.footer(1, 1).columns[0].text, /Document interne · Généré par X/);
+  assert.equal(doc.footer(1, 1).columns[1].text, '1 / 1');
+  const flat = JSON.stringify(doc.content);
+  assert.match(flat, /\+5,0 %/);
+  assert.match(flat, /"color":"#B42318"/, 'Variation défavorable en rouge');
+  assert.match(flat, /polyline/, 'Mini-courbes');
+  // Sans logo : repli texte, aucun nœud SVG.
+  assert.equal(Exporter.execReportDocDefinition(payload, null).content[0].columns[0].text, 'VRSC');
+});

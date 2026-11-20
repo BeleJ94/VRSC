@@ -39,7 +39,73 @@ $alertDrills = [
     'out_of_service' => drill_spec('equipment', '/equipment/data', t('status.out_of_service'), ['status' => 'out_of_service'] + $q, '/equipment', '/equipment/{id}'),
 ];
 $closing = $dash['closing'];
+
+// Rapport PDF de direction (une page) : mêmes chiffres que l'écran, déjà formatés.
+$tone = static function (array $kpi): string {
+    $d = $kpi['delta'];
+    if ($d === null || abs($d) < 0.5) {
+        return 'flat';
+    }
+
+    return $kpi['better'] === 'neutral' ? 'neutral' : ((($d > 0) === ($kpi['better'] === 'up')) ? 'good' : 'bad');
+};
+$deltaText = static fn (array $kpi): ?string => $kpi['delta'] !== null ? ($kpi['delta'] > 0 ? '+' : '') . format_number($kpi['delta'], 1) . ' %' : null;
+$siteName = '';
+foreach ($dash['sites'] as $s) {
+    if ($siteId !== null && $s['id'] === $siteId) {
+        $siteName = $s['name'];
+    }
+}
+$periodLabels = ['month' => 'dashboard.period_month', 'last_month' => 'dashboard.period_last_month', 'quarter' => 'dashboard.period_quarter', 'year' => 'dashboard.period_year'];
+$report = [
+    'title' => t('dashboard.report_title'),
+    'subtitle' => t($periodLabels[$period['key']]) . ' · ' . format_date($from) . ' – ' . format_date($to) . ' · ' . ($siteName !== '' ? $siteName : t('common.all_sites')),
+    'generated' => t('dashboard.report_generated', ['date' => format_date(date('Y-m-d H:i:s'), true), 'name' => $currentUser->name()]),
+    'confidential' => t('js.drill.confidential'),
+    'filename' => 'rapport-direction-' . $period['key'] . '-' . date('Ymd'),
+    'kpis' => [
+        ['label' => t('dashboard.kpi_engaged'), 'value' => format_money($k['engaged']['value']), 'delta' => $deltaText($k['engaged']), 'tone' => $tone($k['engaged']), 'hint' => t('dashboard.hint_engaged'), 'series' => $k['engaged']['series']],
+        ['label' => t('dashboard.kpi_paid'), 'value' => format_money($k['paid']['value']), 'delta' => $deltaText($k['paid']), 'tone' => $tone($k['paid']), 'hint' => t('dashboard.hint_paid'), 'series' => $k['paid']['series']],
+        ['label' => t('dashboard.kpi_fleet_cost'), 'value' => format_money($k['fleet_cost']['value']), 'delta' => $deltaText($k['fleet_cost']), 'tone' => $tone($k['fleet_cost']),
+            'hint' => $k['fleet_cost']['missing'] > 0 ? t('dashboard.hint_missing', ['count' => $k['fleet_cost']['missing']]) : t('dashboard.hint_fleet_cost'), 'series' => $k['fleet_cost']['series']],
+        ['label' => t('dashboard.availability'), 'value' => format_number($avail['value'], 1) . ' %', 'delta' => null, 'tone' => $availTone ?? 'flat',
+            'hint' => t('dashboard.available_of', ['available' => $avail['available'], 'total' => $avail['total']]), 'series' => []],
+        ['label' => t('dashboard.kpi_stock_value'), 'value' => format_money($k['stock_value']['value']), 'delta' => null, 'tone' => 'flat', 'hint' => t('dashboard.hint_stock_value'), 'series' => []],
+        ['label' => t('dashboard.kpi_edb_rate'), 'value' => $k['edb_rate']['empty'] ? '—' : format_number($k['edb_rate']['value'], 0) . ' %', 'delta' => $deltaText($k['edb_rate']), 'tone' => $tone($k['edb_rate']),
+            'hint' => t('dashboard.hint_edb_rate', ['executed' => $k['edb_rate']['executed'], 'issued' => $k['edb_rate']['issued']]), 'series' => []],
+    ],
+    'sites' => [
+        'title' => t('dashboard.sites_title'),
+        'headers' => [t('fields.site_id'), t('dashboard.col_availability'), t('dashboard.col_fleet_cost'), t('dashboard.col_paid'), t('dashboard.col_stock'), t('dashboard.col_open_edb')],
+        'rows' => array_map(static fn (array $s): array => [
+            $s['name'], $s['availability'] !== null ? format_number($s['availability'], 0) . ' %' : '—', format_money($s['cost']), format_money($s['paid']), format_money($s['stock']), (string) $s['open_edb'],
+            $s['availability'] === null ? '' : ($s['availability'] >= 85 ? 'good' : ($s['availability'] >= 70 ? 'warn' : 'bad')),
+        ], $dash['sites']),
+    ],
+    'top' => [
+        'title' => t('dashboard.top_equipment'),
+        'headers' => ['#', t('fields.equipment_id'), t('fields.site_id'), t('dashboard.kpi_fleet_cost')],
+        'rows' => array_map(static fn (array $r, int $i): array => [(string) ($i + 1), $r['code'] . ' — ' . $r['name'], $r['site'], format_money($r['total']) . ((int) $r['missing'] > 0 ? ' (!)' : '')],
+            $dash['top_equipment'], array_keys($dash['top_equipment'])),
+        'note' => t('dashboard.top_equipment_hint'),
+    ],
+    'alerts' => [
+        'title' => t('dashboard.alerts_title'),
+        'empty' => t('dashboard.no_alert'),
+        'rows' => array_map(static fn (array $a): array => [t($alertLabels[$a['key']], ['count' => $a['count'], 'amount' => format_money($a['amount'] ?? 0), 'period' => $a['period'] ?? '']), $a['level']], $dash['alerts']),
+    ],
+    'trend' => [
+        'title' => t('dashboard.report_trend'),
+        'headers' => [t('dashboard.report_month'), t('dashboard.kpi_engaged'), t('dashboard.kpi_paid'), t('dashboard.kpi_fleet_cost')],
+        'rows' => array_map(static fn (string $m, int $i): array => [
+            $m, format_money($k['engaged']['series'][$i] ?? 0), format_money($k['paid']['series'][$i] ?? 0), format_money($k['fleet_cost']['series'][$i] ?? 0),
+        ], $months, array_keys($months)),
+    ],
+    'closing' => ['title' => t('dashboard.closing_title', ['period' => $closing['period']]), 'done' => $closing['done'], 'expected' => $closing['expected'],
+        'text' => t('dashboard.report_closing', ['done' => $closing['done'], 'expected' => $closing['expected']])],
+];
 ?>
+<script type="application/json" id="exec-report"><?= json_for_html($report) ?></script>
 <div class="xkpis">
     <?= $kpi(['label' => t('dashboard.kpi_engaged'), 'value' => e(format_money($k['engaged']['value'])), 'kpi' => $k['engaged'], 'url' => '/finance/reports', 'hint' => t('dashboard.hint_engaged'),
         'drill' => $commitments(['from' => $from, 'to' => $to], t('dashboard.kpi_engaged')), 'months' => $months,

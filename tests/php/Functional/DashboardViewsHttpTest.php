@@ -179,6 +179,25 @@ final class DashboardViewsHttpTest extends DatabaseTestCase
         self::assertStringContainsString('Suivi de mes demandes', $this->page('supervisor', [$this->site], false));
     }
 
+    public function testExecutiveReportPayload(): void
+    {
+        $html = $this->page('director', [], true, '/?view=executive&period=quarter');
+        self::assertStringContainsString('data-exec-report', $html, 'Bouton « Rapport PDF »');
+        self::assertSame(1, preg_match('#<script type="application/json" id="exec-report">(.*?)</script>#s', $html, $m));
+        $report = json_decode(html_entity_decode($m[1]), true);
+        self::assertSame('Rapport de direction', $report['title']);
+        self::assertStringContainsString('Trimestre en cours', $report['subtitle']);
+        self::assertCount(6, $report['kpis']);
+        self::assertSame(['Dépenses engagées', 'Dépenses payées', 'Coût de la flotte', 'Disponibilité du parc', 'Valeur du stock', 'EDB exécutés'], array_column($report['kpis'], 'label'));
+        self::assertCount(2, $report['sites']['rows'], 'Une ligne par site du périmètre');
+        self::assertCount(6, $report['trend']['rows'], '6 mois');
+        self::assertStringStartsWith('rapport-direction-quarter-', $report['filename']);
+        // Pas de bouton ni de données de rapport hors de la vue Exécutive.
+        $finance = $this->page('finance', [], true, '/?view=finance');
+        self::assertStringNotContainsString('data-exec-report', $finance);
+        self::assertStringNotContainsString('id="exec-report"', $finance);
+    }
+
     public function testPeriodBounds(): void
     {
         $month = ExecutiveDashboardRepository::period('month', '2026-03-31');

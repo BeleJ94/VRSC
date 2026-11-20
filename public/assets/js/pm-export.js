@@ -276,6 +276,141 @@
   }
 
   /**
+   * Rapport de direction d'une page (A4 paysage) à partir de la vue Exécutive : bandeau (logo, titre, période),
+   * 6 indicateurs (valeur, variation colorée selon le sens favorable, mini-courbe), comparaison des sites,
+   * engins les plus coûteux, alertes, avancement des clôtures, pied de page (auteur, date, confidentialité).
+   * Les montants arrivent déjà formatés par le serveur : le PDF reprend exactement les chiffres de l'écran.
+   */
+  function execReportDocDefinition(p, logo) {
+    var NAVY = '#0D5487';
+    var ORANGE = '#F5A369';
+    var GREY = '#5B6573';
+    var LINE = '#DDE1E6';
+    var TONE = { good: '#1E7A4C', bad: '#B42318', warn: '#B54708', neutral: NAVY, flat: GREY };
+    var W = 786; // largeur utile (842 - 2 × 28)
+    var tileW = (W - 5 * 8) / 6;
+
+    function spark(series, width) {
+      var values = (series || []).map(Number);
+      if (values.length < 2 || Math.max.apply(null, values) <= 0) return { text: '' };
+      var max = Math.max.apply(null, values);
+      var min = Math.min.apply(null, values);
+      var range = Math.max(0.0001, max - min);
+      var step = width / (values.length - 1);
+      var points = values.map(function (v, i) { return { x: Math.round(i * step * 10) / 10, y: Math.round((16 - ((v - min) / range) * 14) * 10) / 10 }; });
+      return { canvas: [{ type: 'polyline', lineWidth: 1.2, lineColor: '#9DB8D2', points: points }], margin: [0, 4, 0, 0] };
+    }
+
+    function tile(k) {
+      return {
+        width: tileW,
+        table: { widths: ['*'], body: [[{ stack: [
+          { text: k.label, fontSize: 7, color: GREY, bold: true },
+          { text: k.value, fontSize: 13, bold: true, color: k.tone === 'bad' && !k.delta ? TONE.bad : '#1D2733', margin: [0, 3, 0, 1] },
+          { text: [k.delta ? { text: k.delta + '  ', bold: true, color: TONE[k.tone] || GREY } : '', { text: k.hint || '', color: GREY }], fontSize: 6.5 },
+          spark(k.series, tileW - 16)
+        ], margin: [6, 6, 6, 6] }]] },
+        layout: {
+          hLineWidth: function () { return 0.5; }, vLineWidth: function (i) { return i === 0 ? 2 : 0.5; },
+          hLineColor: function () { return LINE; }, vLineColor: function (i) { return i === 0 ? (TONE[k.tone] && k.tone !== 'flat' && k.tone !== 'neutral' ? TONE[k.tone] : LINE) : LINE; }
+        }
+      };
+    }
+
+    function heading(text) {
+      return { text: text, fontSize: 9, bold: true, color: NAVY, margin: [0, 0, 0, 4] };
+    }
+
+    function grid(headers, rows, widths, rightFrom, toneCol) {
+      return {
+        table: {
+          headerRows: 1,
+          widths: widths,
+          body: [headers.map(function (h, i) { return { text: h, bold: true, color: '#FFFFFF', fillColor: NAVY, fontSize: 7, alignment: i >= rightFrom ? 'right' : 'left' }; })]
+            .concat(rows.map(function (r) {
+              return headers.map(function (_, i) {
+                var cell = { text: String(r[i] === undefined ? '' : r[i]), fontSize: 7.5, alignment: i >= rightFrom ? 'right' : 'left', noWrap: i >= rightFrom };
+                if (toneCol !== undefined && i === toneCol && r[headers.length]) cell.color = TONE[r[headers.length]] || '#1D2733';
+                if (i === 0) cell.bold = true;
+                return cell;
+              });
+            }))
+        },
+        layout: {
+          hLineWidth: function (i, node) { return i === 0 || i === node.table.body.length ? 0 : 0.5; }, vLineWidth: function () { return 0; },
+          hLineColor: function () { return LINE; },
+          fillColor: function (row) { return row > 0 && row % 2 === 0 ? '#F5F7FA' : null; },
+          paddingTop: function () { return 3; }, paddingBottom: function () { return 3; }
+        }
+      };
+    }
+
+    var sites = p.sites.rows.slice(0, 8);
+    var top = p.top.rows.slice(0, 5);
+    var alerts = (p.alerts.rows || []).slice(0, 7);
+    var ratio = p.closing.expected > 0 ? p.closing.done / p.closing.expected : 0;
+
+    return {
+      pageOrientation: 'landscape',
+      pageSize: 'A4',
+      pageMargins: [28, 26, 28, 34],
+      defaultStyle: { fontSize: 8, color: '#1D2733' },
+      info: { title: p.title, author: 'ETHAN VRSC', creator: 'ETHAN VRSC' },
+      footer: function (current, count) {
+        return { columns: [
+          { text: 'ETHAN VRSC · VRSC SARL — ' + (p.confidential || '') + ' · ' + (p.generated || ''), fontSize: 6.5, color: GREY, margin: [28, 12, 0, 0] },
+          { text: current + ' / ' + count, alignment: 'right', fontSize: 6.5, color: GREY, margin: [0, 12, 28, 0] }
+        ] };
+      },
+      content: [
+        { columns: [
+          logo ? { svg: logo, width: 112 } : { text: 'VRSC', fontSize: 18, bold: true, color: NAVY },
+          { stack: [
+            { text: p.title, fontSize: 16, bold: true, color: NAVY, alignment: 'right' },
+            { text: p.subtitle, fontSize: 8, color: GREY, alignment: 'right', margin: [0, 3, 0, 0] }
+          ] }
+        ] },
+        { canvas: [
+          { type: 'line', x1: 0, y1: 0, x2: W, y2: 0, lineWidth: 1.5, lineColor: NAVY },
+          { type: 'line', x1: 0, y1: 0, x2: 90, y2: 0, lineWidth: 1.5, lineColor: ORANGE }
+        ], margin: [0, 6, 0, 10] },
+        { columns: p.kpis.slice(0, 6).map(tile), columnGap: 8, margin: [0, 0, 0, 12] },
+        { columns: [
+          { width: '*', stack: [
+            heading(p.sites.title),
+            grid(p.sites.headers, sites, ['*', 52, 70, 70, 70, 34], 1, 1),
+            { text: '', margin: [0, 0, 0, 10] },
+            heading(p.top.title),
+            top.length ? grid(p.top.headers, top, [14, '*', 110, 80], 3) : { text: '—', color: GREY },
+            { text: p.top.note, fontSize: 6.5, color: GREY, margin: [0, 3, 0, 0] },
+            p.trend ? { stack: [heading(p.trend.title), grid(p.trend.headers, p.trend.rows, [70, '*', '*', '*'], 1)], margin: [0, 10, 0, 0] } : { text: '' }
+          ] },
+          { width: 230, stack: [
+            heading(p.alerts.title),
+            alerts.length
+              ? { stack: alerts.map(function (a) {
+                return { table: { widths: [3, '*'], body: [[{ text: '', fillColor: TONE[a[1]] || NAVY }, { text: a[0], fontSize: 7.5, margin: [4, 2, 0, 2] }]] },
+                  layout: 'noBorders', margin: [0, 0, 0, 4] };
+              }) }
+              : { text: p.alerts.empty, color: GREY },
+            { text: '', margin: [0, 0, 0, 8] },
+            heading(p.closing.title),
+            { text: p.closing.text, fontSize: 7.5, color: GREY, margin: [0, 0, 0, 4] },
+            { canvas: [
+              { type: 'rect', x: 0, y: 0, w: 230, h: 6, r: 3, color: '#EEF0F3' },
+              { type: 'rect', x: 0, y: 0, w: Math.max(0, Math.min(230, 230 * ratio)), h: 6, r: 3, color: ratio >= 1 ? '#1E7A4C' : '#F5A524' }
+            ] }
+          ] }
+        ], columnGap: 18 }
+      ]
+    };
+  }
+
+  function exportExecReport(pdfMake, payload, logo) {
+    downloadPdf(pdfMake, execReportDocDefinition(payload, logo), (payload.filename || 'rapport-direction') + '.pdf');
+  }
+
+  /**
    * Bon de travail imprimable d'un OT : en-tête avec référence et statut, fiches engin / intervention,
    * description, travaux réalisés, intervenants, pièces chiffrées, signatures, pied de page paginé.
    * @param {Array} [technicians] intervenants (nom, métier, minutes)
@@ -1139,6 +1274,8 @@
     listDocDefinition: listDocDefinition,
     buildExecutiveWorkbook: buildExecutiveWorkbook,
     executiveDocDefinition: executiveDocDefinition,
+    execReportDocDefinition: execReportDocDefinition,
+    exportExecReport: exportExecReport,
     workOrderDocDefinition: workOrderDocDefinition,
     exportExcel: exportExcel,
     exportPdf: exportPdf,
