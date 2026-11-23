@@ -46,3 +46,31 @@ test('Excel : logo posé à droite du bandeau, version blanche sur fond foncé',
   const none = { worksheets: [] };
   assert.strictEqual(Exporter.brandWorkbook(none, null), none);
 });
+
+test('fiche engin PDF : en-tête, indicateurs, sections et coûts selon les droits', () => {
+  const block = (headers, rows) => ({ headers, rows });
+  const p = {
+    title: 'FICHE ENGIN', code: 'KOL-ADT-02', name: 'Tombereau', subtitle: 'Volvo', generated: 'Généré', confidential: 'Interne', filename: 'f', currency: '$',
+    labels: { identity: 'Caractéristiques', kpis: 'KPI', cost_kinds: 'Coûts par nature', months: 'Mensuel', work_orders: 'OT', preventive: 'Préventif', documents: 'Documents', history: 'Historique', none: 'Aucun', total: 'Total' },
+    identity: [['Code', 'KOL-ADT-02']],
+    kpis: [{ label: 'Statut', value: 'Disponible', hint: '' }, { label: 'Coût', value: '10 $', hint: '' }],
+    show_costs: true,
+    cost_kinds: { headers: ['Nature', 'Montant', 'Part'], rows: [['Carburant', 80, 80], ['Pièces', 20, 20]], total: 100 },
+    months: block(['Mois', 'Montant', 'L'], [['2026-10', 40, 10], ['2026-11', 60, 12]]),
+    work_orders: block(['Réf', 'Intitulé', 'Type', 'Statut', 'Signalé', 'Clôturé', 'Coût'], [['OT-1', 'Fuite', 'Correctif', 'Ouvert', '2026-11-01', '', 12.5]]),
+    preventive: block(['Intitulé', 'Périodicité', 'Prochaine', 'Actif'], []),
+    documents: block(['Doc', 'Réf', 'Échéance', 'Statut'], [['Assurance', 'POL', '28/10/2026', 'Expiré', 'bad']]),
+    history: block(['Date', 'De', 'Vers', 'Motif', 'Par'], [])
+  };
+  const doc = Exporter.equipmentReportDocDefinition(p, '<svg/>', 'fr');
+  const flat = JSON.stringify(doc.content);
+  assert.strictEqual(doc.content[0].columns[0].svg, '<svg/>');
+  assert.match(flat, /KOL-ADT-02 — Tombereau/);
+  assert.match(flat, /COÛTS PAR NATURE/);
+  assert.match(flat, /OT-1/);
+  assert.match(flat, /#B42318/, 'Document expiré en rouge');
+  assert.strictEqual(doc.footer(1, 2).columns[1].text, '1 / 2');
+  const noCost = JSON.stringify(Exporter.equipmentReportDocDefinition({ ...p, show_costs: false }, null, 'fr').content);
+  assert.doesNotMatch(noCost, /COÛTS PAR NATURE/);
+  assert.match(noCost, /PRÉVENTIF/);
+});

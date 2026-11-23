@@ -48,6 +48,8 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
         <div class="menu" data-menu>
             <button type="button" class="btn" data-menu-toggle aria-haspopup="true" aria-expanded="false" aria-label="<?= e(t('common.more')) ?>"><i data-lucide="more-horizontal"></i></button>
             <div class="menu__list" role="menu" hidden>
+                <button type="button" role="menuitem" data-eq-report="pdf" data-url="<?= e(url($eqUrl . '/report')) ?>"><i data-lucide="file-text"></i><?= e(t('report_eq.download_pdf')) ?></button>
+                <button type="button" role="menuitem" data-eq-report="excel" data-url="<?= e(url($eqUrl . '/report')) ?>"><i data-lucide="file-spreadsheet"></i><?= e(t('report_eq.download_excel')) ?></button>
                 <?php if ($currentUser->can('equipment.status')): ?>
                     <button type="button" role="menuitem" data-open="#status-dialog"><i data-lucide="refresh-cw"></i><?= e(t('equipment.change_status')) ?></button>
                 <?php endif; ?>

@@ -1036,6 +1036,25 @@
     });
   });
 
+  // Fiche exécutive de l'engin : données chargées à la demande, puis PDF (pdfmake) ou classeur Excel multi-feuilles.
+  $(document).on('click', '[data-eq-report]', function () {
+    var button = this;
+    var kind = button.getAttribute('data-eq-report');
+    button.disabled = true;
+    Swal.fire({ title: t('js.eq_report.preparing'), allowOutsideClick: false, showConfirmButton: false, customClass: { popup: 'confirm-popup' }, didOpen: function () { Swal.showLoading(); } });
+    $.getJSON(button.getAttribute('data-url'))
+      .then(function (payload) {
+        if (kind === 'excel') {
+          return loadExcelJs().then(function (ExcelJS) { return Exporter.exportEquipmentReportExcel(ExcelJS, payload); });
+        }
+        return Promise.resolve(loadLogo()).then(function (logo) {
+          return loadPdfMake().then(function (pdfMake) { Exporter.exportEquipmentReportPdf(pdfMake, payload, logo, locale); });
+        });
+      })
+      .then(function () { Swal.close(); }, function () { Swal.close(); alertError(); })
+      .always(function () { button.disabled = false; });
+  });
+
   // Bon de travail PDF
   $(document).on('click', '[data-wo-pdf]', function () {
     var payload = readJson('wo-data');

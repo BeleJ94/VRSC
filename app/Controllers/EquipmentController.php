@@ -34,6 +34,7 @@ final class EquipmentController extends Controller
     public function __construct(
         ControllerContext $ctx,
         private readonly EquipmentRepository $equipment,
+        private readonly \App\Services\EquipmentReportService $reports,
         private readonly EquipmentService $service,
         private readonly SiteRepository $sites,
         private readonly WorkOrderRepository $workOrders,
@@ -121,6 +122,12 @@ final class EquipmentController extends Controller
             'plans' => $this->plans->forEquipment((int) $item['id']),
             'activity' => $this->user()->can('activity.view') ? $this->activity->forEntity('equipment', (int) $item['id'], 300) : [],
         ]);
+    }
+
+    /** Données de la fiche exécutive (PDF / Excel générés par le navigateur). */
+    public function report(Request $request, array $params): Response
+    {
+        return $this->json($this->reports->build($this->id($params)));
     }
 
     public function create(Request $request): Response

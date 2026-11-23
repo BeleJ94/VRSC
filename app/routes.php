@@ -58,6 +58,7 @@ return static function (Router $r): void {
     $r->get('/equipment/create', [EquipmentController::class, 'create'], ['permission' => 'equipment.manage']);
     $r->post('/equipment', [EquipmentController::class, 'store'], ['permission' => 'equipment.manage']);
     $r->get('/equipment/{id}', [EquipmentController::class, 'show'], ['permission' => 'equipment.view']);
+    $r->get('/equipment/{id}/report', [EquipmentController::class, 'report'], ['permission' => 'equipment.view']);
     $r->get('/equipment/{id}/edit', [EquipmentController::class, 'edit'], ['permission' => 'equipment.manage']);
     $r->post('/equipment/{id}', [EquipmentController::class, 'update'], ['permission' => 'equipment.manage']);
     $r->post('/equipment/{id}/status', [EquipmentController::class, 'status'], ['permission' => 'equipment.status']);

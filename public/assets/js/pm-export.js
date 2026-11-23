@@ -1405,6 +1405,255 @@
     setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1000);
   }
 
+  // --- Fiche exécutive d'un engin (PDF A4 et classeur Excel multi-feuilles) -----------------
+
+  /**
+   * Fiche engin PDF : bandeau (logo, code, période), indicateurs clés, caractéristiques, coûts par nature
+   * et sur 12 mois (barres), ordres de travail, préventif, documents, historique d'état. Pied de page paginé.
+   */
+  function equipmentReportDocDefinition(p, logo, locale) {
+    var NAVY = '#0D5487';
+    var ORANGE = '#F5A369';
+    var GREY = '#5B6573';
+    var LINE = '#DDE1E6';
+    var TONE = { good: '#1E7A4C', bad: '#B42318', warn: '#B54708' };
+    var W = 531; // 595 - 2 × 32
+    var money = function (v) { return Core.formatMoney(v, locale); };
+    var num = function (v, d) { return Core.formatNumber(v, locale, d); };
+    var date = function (v, time) { return v ? Core.formatDate(v, locale, time) : ''; };
+    var L = p.labels;
+
+    function heading(text) { return { text: text.toUpperCase(), fontSize: 8, bold: true, color: NAVY, characterSpacing: 0.5, margin: [0, 12, 0, 5] }; }
+    function grid(headers, rows, widths, align) {
+      return {
+        table: {
+          headerRows: 1, widths: widths,
+          body: [headers.map(function (h, i) { return { text: h, bold: true, color: '#FFFFFF', fillColor: NAVY, fontSize: 7, alignment: align[i] || 'left' }; })]
+            .concat(rows.map(function (r) { return r.map(function (c, i) { return typeof c === 'object' && c !== null ? c : { text: String(c === null || c === undefined ? '' : c), fontSize: 7.5, alignment: align[i] || 'left' }; }); }))
+        },
+        layout: {
+          hLineWidth: function (i, node) { return i === 0 || i === node.table.body.length ? 0 : 0.5; }, vLineWidth: function () { return 0; },
+          hLineColor: function () { return LINE; }, fillColor: function (row) { return row > 0 && row % 2 === 0 ? '#F5F7FA' : null; },
+          paddingTop: function () { return 3; }, paddingBottom: function () { return 3; }
+        }
+      };
+    }
+    function empty() { return { text: L.none, color: GREY, fontSize: 8 }; }
+
+    var tiles = p.kpis.map(function (k) {
+      return {
+        table: { widths: ['*'], body: [[{ stack: [
+          { text: k.label, fontSize: 6.5, color: GREY, bold: true },
+          { text: k.value, fontSize: 12, bold: true, color: '#1D2733', margin: [0, 2, 0, 1] },
+          { text: k.hint || ' ', fontSize: 6.5, color: GREY }
+        ], margin: [5, 5, 5, 5] }]] },
+        layout: { hLineWidth: function () { return 0.5; }, vLineWidth: function (i) { return i === 0 ? 2 : 0.5; }, hLineColor: function () { return LINE; }, vLineColor: function (i) { return i === 0 ? NAVY : LINE; } }
+      };
+    });
+
+    var identity = {
+      table: { widths: [92, '*'], body: p.identity.map(function (r) { return [{ text: r[0], color: GREY, fontSize: 7.5 }, { text: r[1], fontSize: 7.5, bold: true }]; }) },
+      layout: { hLineWidth: function (i, node) { return i === 0 || i === node.table.body.length ? 0 : 0.5; }, vLineWidth: function () { return 0; }, hLineColor: function () { return LINE; }, paddingTop: function () { return 2.5; }, paddingBottom: function () { return 2.5; } }
+    };
+
+    var right;
+    if (p.show_costs) {
+      var months = p.months.rows;
+      var max = Math.max.apply(null, months.map(function (m) { return m[1]; }).concat([1]));
+      var bw = 230 / Math.max(1, months.length);
+      var bars = [];
+      months.forEach(function (m, i) {
+        var h = Math.round((m[1] / max) * 56 * 10) / 10;
+        bars.push({ type: 'rect', x: i * bw + 2, y: 60 - h, w: bw - 4, h: Math.max(0.5, h), color: i === months.length - 1 ? ORANGE : '#9DB8D2' });
+      });
+      right = { stack: [
+        heading(L.cost_kinds),
+        p.cost_kinds.rows.length
+          ? grid(p.cost_kinds.headers, p.cost_kinds.rows.map(function (r) { return [r[0], money(r[1]), num(r[2], 1) + ' %']; })
+            .concat([[{ text: L.total, bold: true, fontSize: 7.5 }, { text: money(p.cost_kinds.total), bold: true, fontSize: 7.5, alignment: 'right' }, '']]), ['*', 80, 40], ['left', 'right', 'right'])
+          : empty(),
+        heading(L.months),
+        { canvas: bars },
+        { columns: [{ text: months.length ? months[0][0] : '', fontSize: 6, color: GREY }, { text: months.length ? months[months.length - 1][0] : '', fontSize: 6, color: GREY, alignment: 'right' }], margin: [0, 2, 0, 0] }
+      ] };
+    } else {
+      right = { stack: [heading(L.preventive), p.preventive.rows.length ? grid(p.preventive.headers.slice(0, 3), p.preventive.rows.map(function (r) { return r.slice(0, 3); }), ['*', 70, 70], []) : empty()] };
+    }
+
+    var wo = p.work_orders.rows.slice(0, 12).map(function (r) {
+      return [{ text: r[0], fontSize: 7.5, bold: true }, r[1], r[2], r[3], date(r[4]), r[5] ? date(r[5]) : '—', r[6] > 0 ? money(r[6]) : '—'];
+    });
+    var docs = p.documents.rows.map(function (r) { return [r[0], r[1] || '—', r[2], { text: r[3], fontSize: 7.5, bold: true, color: TONE[r[4]] || '#1D2733' }]; });
+    var hist = p.history.rows.slice(0, 8).map(function (r) { return [date(r[0], true), r[1], r[2], r[3], r[4]]; });
+
+    var content = [
+      { columns: [
+        logo ? { svg: logo, width: 104 } : { text: 'VRSC', fontSize: 18, bold: true, color: NAVY },
+        { stack: [
+          { text: p.title, fontSize: 9, color: GREY, alignment: 'right', bold: true, characterSpacing: 0.5 },
+          { text: p.code + ' — ' + p.name, fontSize: 15, bold: true, color: NAVY, alignment: 'right', margin: [0, 2, 0, 0] },
+          { text: p.subtitle, fontSize: 7.5, color: GREY, alignment: 'right', margin: [0, 2, 0, 0] }
+        ] }
+      ] },
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: W, y2: 0, lineWidth: 1.5, lineColor: NAVY }, { type: 'line', x1: 0, y1: 0, x2: 80, y2: 0, lineWidth: 1.5, lineColor: ORANGE }], margin: [0, 6, 0, 10] },
+      { columns: tiles, columnGap: 6 },
+      { columns: [{ width: '*', stack: [heading(L.identity), identity] }, { width: 240, stack: right.stack }], columnGap: 16 },
+      heading(L.work_orders),
+      wo.length ? grid(p.work_orders.headers, wo, [62, '*', 52, 52, 48, 48, 54], ['left', 'left', 'left', 'left', 'left', 'left', 'right']) : empty()
+    ];
+    // Titre et tableau insécables : un titre ne reste jamais seul en bas de page.
+    function block(title, body) { return { stack: [heading(title), body], unbreakable: true }; }
+    if (p.show_costs) {
+      content.push(block(L.preventive, p.preventive.rows.length ? grid(p.preventive.headers, p.preventive.rows, ['*', 120, 120, 40], []) : empty()));
+    }
+    content.push(block(L.documents, docs.length ? grid(p.documents.headers, docs, [70, '*', 50, 70], []) : empty()));
+    content.push(block(L.history, hist.length ? grid(p.history.headers, hist, [62, 70, 70, '*', 70], []) : empty()));
+
+    return {
+      pageSize: 'A4',
+      pageMargins: [32, 28, 32, 36],
+      defaultStyle: { fontSize: 8, color: '#1D2733' },
+      info: { title: p.title + ' ' + p.code, author: 'ETHAN VRSC', creator: 'ETHAN VRSC' },
+      footer: function (current, count) {
+        return { columns: [
+          { text: 'ETHAN VRSC · VRSC SARL — ' + (p.confidential || '') + ' · ' + (p.generated || ''), fontSize: 6.5, color: GREY, margin: [32, 12, 0, 0] },
+          { text: current + ' / ' + count, alignment: 'right', fontSize: 6.5, color: GREY, margin: [0, 12, 32, 0] }
+        ] };
+      },
+      content: content
+    };
+  }
+
+  /**
+   * Fiche engin Excel : une feuille de synthèse (caractéristiques, indicateurs, coûts par nature avec total en formule)
+   * puis une feuille par sujet (coûts mensuels, détail des coûts, OT, préventif, documents, historique, relevés),
+   * chacune avec bandeau, en-tête figé, filtre automatique et formats natifs (montants, dates, nombres).
+   */
+  function buildEquipmentWorkbook(ExcelJS, p) {
+    var L = p.labels;
+    var wb = new ExcelJS.Workbook();
+    wb.creator = 'ETHAN VRSC';
+    wb.title = p.title + ' ' + p.code;
+    var MONEY = '#,##0.00 "' + (p.currency || '$') + '"';
+    var thin = { style: 'thin', color: { argb: 'FFDDE1E6' } };
+    var border = { top: thin, left: thin, bottom: thin, right: thin };
+
+    function toDate(s) {
+      if (!s) return null;
+      var d = new Date(String(s).replace(' ', 'T') + (String(s).length <= 10 ? 'T00:00:00' : ''));
+      return isNaN(d.getTime()) ? s : d;
+    }
+    function sheet(name, landscape) {
+      return wb.addWorksheet(String(name).replace(/[\\/?*[\]:]/g, ' ').slice(0, 31), {
+        views: [{ showGridLines: false }],
+        pageSetup: { orientation: landscape ? 'landscape' : 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 },
+        headerFooter: { oddFooter: '&8ETHAN VRSC · ' + (p.confidential || '') + '&R&8&P / &N' }
+      });
+    }
+    function banner(ws, title, lastCol) {
+      ws.mergeCells(1, 1, 1, lastCol);
+      var c = ws.getCell(1, 1);
+      c.value = title;
+      c.font = { bold: true, size: 15, color: { argb: 'FF0D5487' } };
+      c.alignment = { vertical: 'middle' };
+      ws.getRow(1).height = 30;
+      ws.mergeCells(2, 1, 2, lastCol);
+      ws.getCell(2, 1).value = p.code + ' — ' + p.name + ' · ' + p.subtitle;
+      ws.getCell(2, 1).font = { size: 9, color: { argb: 'FF5B6573' } };
+    }
+    /** Tableau à partir de la ligne `top` ; fmts : 'money' | 'date' | 'datetime' | 'int' | 'num' | 'pct' | null par colonne. */
+    function table(ws, top, headers, rows, fmts, widths) {
+      var head = ws.getRow(top);
+      headers.forEach(function (h, i) {
+        var cell = head.getCell(i + 1);
+        cell.value = h;
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D5487' } };
+        cell.alignment = { vertical: 'middle', wrapText: true };
+        cell.border = border;
+      });
+      head.height = 20;
+      rows.forEach(function (r, ri) {
+        var row = ws.getRow(top + 1 + ri);
+        r.slice(0, headers.length).forEach(function (v, ci) {
+          var cell = row.getCell(ci + 1);
+          var f = fmts[ci];
+          cell.value = f === 'date' || f === 'datetime' ? toDate(v) : (v === '' ? null : v);
+          if (f === 'money') cell.numFmt = MONEY;
+          else if (f === 'date') cell.numFmt = 'dd/mm/yyyy';
+          else if (f === 'datetime') cell.numFmt = 'dd/mm/yyyy hh:mm';
+          else if (f === 'int') cell.numFmt = '#,##0';
+          else if (f === 'num') cell.numFmt = '#,##0.00';
+          else if (f === 'pct') cell.numFmt = '0.0" %"';
+          cell.border = border;
+          if (ri % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F7FA' } };
+        });
+      });
+      (widths || []).forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
+      if (rows.length) ws.autoFilter = { from: { row: top, column: 1 }, to: { row: top, column: headers.length } };
+      return top + 1 + rows.length;
+    }
+    function listSheet(name, block, fmts, widths, landscape) {
+      var ws = sheet(name, landscape);
+      banner(ws, name, block.headers.length);
+      ws.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }];
+      var end = table(ws, 4, block.headers, block.rows, fmts, widths);
+      if (!block.rows.length) ws.getCell(5, 1).value = L.none;
+      return { ws: ws, end: end };
+    }
+
+    // Synthèse
+    var s = sheet(L.summary, false);
+    banner(s, p.title + ' — ' + p.code, 4);
+    var r = 4;
+    s.getCell(r, 1).value = L.kpis; s.getCell(r, 1).font = { bold: true, color: { argb: 'FF0D5487' } };
+    r = table(s, r + 1, [L.kpis, '', ''], p.kpis.map(function (k) { return [k.label, k.value, k.hint || '']; }), [null, null, null], [30, 26, 34, 16]) + 1;
+    s.getCell(r, 1).value = L.identity; s.getCell(r, 1).font = { bold: true, color: { argb: 'FF0D5487' } };
+    r = table(s, r + 1, [L.identity, ''], p.identity, [null, null]) + 1;
+    if (p.show_costs) {
+      s.getCell(r, 1).value = L.cost_kinds; s.getCell(r, 1).font = { bold: true, color: { argb: 'FF0D5487' } };
+      var first = r + 2;
+      r = table(s, r + 1, p.cost_kinds.headers, p.cost_kinds.rows, [null, 'money', 'pct']);
+      if (p.cost_kinds.rows.length) {
+        var tot = s.getRow(r);
+        tot.getCell(1).value = L.total;
+        tot.getCell(2).value = { formula: 'SUM(B' + first + ':B' + (r - 1) + ')', result: p.cost_kinds.total };
+        tot.getCell(2).numFmt = MONEY;
+        [1, 2, 3].forEach(function (c) { tot.getCell(c).font = { bold: true }; tot.getCell(c).border = border; tot.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF4' } }; });
+      }
+      s.autoFilter = undefined;
+    }
+    s.autoFilter = undefined;
+
+    if (p.show_costs) {
+      var m = listSheet(L.months, p.months, ['text', 'money', 'num'], [14, 18, 14]);
+      if (p.months.rows.length) {
+        var t2 = m.ws.getRow(m.end);
+        t2.getCell(1).value = L.total;
+        t2.getCell(2).value = { formula: 'SUM(B5:B' + (m.end - 1) + ')' }; t2.getCell(2).numFmt = MONEY;
+        t2.getCell(3).value = { formula: 'SUM(C5:C' + (m.end - 1) + ')' }; t2.getCell(3).numFmt = '#,##0.00';
+        [1, 2, 3].forEach(function (c) { t2.getCell(c).font = { bold: true }; t2.getCell(c).border = border; });
+      }
+      listSheet(L.cost_lines, p.cost_lines, ['date', null, null, 'num', 'money', null], [12, 18, 44, 10, 14, 18], true);
+    }
+    listSheet(L.work_orders, p.work_orders, [null, null, null, null, 'date', 'date', 'money'], [16, 44, 14, 16, 12, 12, 14], true);
+    listSheet(L.preventive, p.preventive, [null, null, null, null], [32, 30, 30, 10]);
+    listSheet(L.documents, p.documents, [null, null, null, null], [26, 36, 14, 22]);
+    listSheet(L.history, p.history, ['datetime', null, null, null, null], [17, 22, 22, 44, 22], true);
+    listSheet(L.readings, p.readings, ['datetime', 'int', 'int', 'int', null], [17, 16, 16, 12, 22]);
+    return wb;
+  }
+
+  function exportEquipmentReportPdf(pdfMake, payload, logo, locale) {
+    downloadPdf(pdfMake, equipmentReportDocDefinition(payload, logo, locale), payload.filename + '.pdf');
+  }
+
+  function exportEquipmentReportExcel(ExcelJS, payload) {
+    return brandWorkbook(buildEquipmentWorkbook(ExcelJS, payload)).xlsx.writeBuffer().then(function (buffer) {
+      saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), payload.filename + '.xlsx');
+    });
+  }
+
   function exportExcel(ExcelJS, title, data, meta) {
     var wb = brandWorkbook(meta && meta.executive ? buildExecutiveWorkbook(ExcelJS, title, data, meta) : buildWorkbook(ExcelJS, title, data, meta));
     return wb.xlsx.writeBuffer().then(function (buffer) {
@@ -1441,6 +1690,10 @@
     exportPdf: exportPdf,
     pdfSafe: pdfSafe,
     setLogo: setLogo,
+    equipmentReportDocDefinition: equipmentReportDocDefinition,
+    buildEquipmentWorkbook: buildEquipmentWorkbook,
+    exportEquipmentReportPdf: exportEquipmentReportPdf,
+    exportEquipmentReportExcel: exportEquipmentReportExcel,
     setExcelLogo: setExcelLogo,
     brandWorkbook: brandWorkbook,
     brandDocument: brandDocument,
