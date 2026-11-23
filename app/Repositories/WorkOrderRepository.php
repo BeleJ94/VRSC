@@ -248,7 +248,8 @@ final class WorkOrderRepository extends Repository
         [$scopeSql, $params] = $this->scope->clause('w.site_id');
 
         return $this->db->fetchAll(
-            "SELECT w.id, w.reference, w.title, w.type, w.status, w.priority, w.reported_at, w.completed_at
+            "SELECT w.id, w.reference, w.title, w.type, w.status, w.priority, w.reported_at, w.completed_at,
+                    (SELECT COALESCE(SUM(wp.quantity * wp.unit_cost), 0) FROM work_order_parts wp WHERE wp.work_order_id = w.id) AS parts_cost
                FROM work_orders w
               WHERE w.equipment_id = :equipment AND $scopeSql
               ORDER BY w.reported_at DESC, w.id DESC LIMIT " . max(1, $limit),

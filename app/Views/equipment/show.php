@@ -240,7 +240,7 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
                 <p class="empty"><?= e(t('common.none')) ?></p>
             <?php else: ?>
                 <div class="table-wrap"><table class="table table--compact">
-                    <thead><tr><th><?= e(t('fields.reference')) ?></th><th><?= e(t('fields.title')) ?></th><th><?= e(t('fields.status')) ?></th><th><?= e(t('fields.reported_at')) ?></th></tr></thead>
+                    <thead><tr><th><?= e(t('fields.reference')) ?></th><th><?= e(t('fields.title')) ?></th><th><?= e(t('fields.status')) ?></th><th><?= e(t('fields.reported_at')) ?></th><th class="num"><?= e(t('work_orders.parts_cost')) ?></th></tr></thead>
                     <tbody>
                     <?php foreach ($workOrders as $wo): ?>
                         <tr>
@@ -248,6 +248,7 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
                             <td><?= e($wo['title']) ?> <span class="muted">· <?= e(label('wo_type', $wo['type'])) ?></span></td>
                             <td><?= wo_status_badge($wo['status']) ?></td>
                             <td class="nowrap"><?= e(format_date($wo['reported_at'])) ?></td>
+                            <td class="num nowrap"><?= (float) $wo['parts_cost'] > 0 ? e(format_money((float) $wo['parts_cost'])) : '<span class="muted">—</span>' ?></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
