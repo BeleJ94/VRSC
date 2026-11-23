@@ -1036,6 +1036,87 @@
     });
   });
 
+  /**
+   * Demande de transfert d'engin : recherche instantanée (code, nom, catégorie, site, sans accents), fiche de l'engin
+   * choisi (site actuel, statut), site de destination qui exclut le site actuel et rappel du trajet « origine → destination ».
+   */
+  $('[data-fleet-equipment]').each(function () {
+    var $box = $(this);
+    var list = readJson('fleet-equipment') || [];
+    var $value = $box.find('[data-fe-value]');
+    var $search = $box.find('[data-fe-search]');
+    var $input = $search.find('input');
+    var $results = $box.find('[data-fe-results]');
+    var $selected = $box.find('[data-fe-selected]');
+    var $dest = $('[data-fe-destination]');
+    var $route = $('[data-fe-route]');
+    var norm = function (s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); };
+    list.forEach(function (it) { it.hay = norm([it.code, it.name, it.category, it.site].join(' ')); });
+    var byId = {};
+    list.forEach(function (it) { byId[it.id] = it; });
+    var shown = [];
+    var active = -1;
+
+    function badge(it) { return '<span class="badge badge--' + Core.escapeHtml(it.status) + '">' + Core.escapeHtml(it.status_label) + '</span>'; }
+    function syncDestination() {
+      var it = byId[$value.val()];
+      $dest.find('option').each(function () { this.disabled = !!it && this.value !== '' && Number(this.value) === it.site_id; });
+      if (it && Number($dest.val()) === it.site_id) $dest.val('');
+      var to = $dest.find('option:selected');
+      if (it && $dest.val()) {
+        $route.find('[data-fe-from]').text(it.site);
+        $route.find('[data-fe-to]').text(clean(to.text()));
+        $route.prop('hidden', false);
+      } else {
+        $route.prop('hidden', true);
+      }
+    }
+    function select(it) {
+      $value.val(it.id);
+      $box.find('[data-fe-card]').html('<strong>' + Core.escapeHtml(it.code) + '</strong> · ' + Core.escapeHtml(it.name)
+        + '<div class="muted small">' + Core.escapeHtml(t('js.fleet.current_site', { site: it.site })) + ' · ' + badge(it) + '</div>');
+      $selected.prop('hidden', false);
+      $search.prop('hidden', true);
+      $results.empty();
+      syncDestination();
+      $dest.trigger('focus');
+    }
+    function render() {
+      var q = norm($input.val().trim());
+      if (!q) { $results.empty(); shown = []; return; }
+      var words = q.split(/\s+/);
+      shown = list.filter(function (it) { return words.every(function (w) { return it.hay.indexOf(w) !== -1; }); }).slice(0, 25);
+      active = shown.length ? 0 : -1;
+      $results.html(shown.length ? shown.map(function (it, i) {
+        return '<li><button type="button" data-fe-pick="' + i + '"' + (i === active ? ' class="is-active"' : '') + '><span><strong>' + Core.escapeHtml(it.code) + '</strong> · ' + Core.escapeHtml(it.name)
+          + '<span class="muted small fleet-eq__meta">' + Core.escapeHtml([it.category, it.site].filter(Boolean).join(' · ')) + '</span></span>' + badge(it) + '</button></li>';
+      }).join('') : '<li class="fleet-eq__none">' + Core.escapeHtml(t('js.fleet.no_match')) + '</li>');
+    }
+
+    $input.on('input', render).on('keydown', function (e) {
+      if (!shown.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = (active + (e.key === 'ArrowDown' ? 1 : shown.length - 1)) % shown.length;
+        $results.find('button').removeClass('is-active').eq(active).addClass('is-active')[0].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        select(shown[Math.max(0, active)]);
+      }
+    });
+    $results.on('click', '[data-fe-pick]', function () { select(shown[Number(this.getAttribute('data-fe-pick'))]); });
+    $box.on('click', '[data-fe-clear]', function () {
+      $value.val('');
+      $selected.prop('hidden', true);
+      $search.prop('hidden', false);
+      $input.val('').trigger('focus');
+      $results.empty();
+      syncDestination();
+    });
+    $dest.on('change', syncDestination);
+    syncDestination();
+  });
+
   // Fiche exécutive de l'engin : données chargées à la demande, puis PDF (pdfmake) ou classeur Excel multi-feuilles.
   $(document).on('click', '[data-eq-report]', function () {
     var button = this;

@@ -2136,3 +2136,15 @@ table.dataTable tbody tr.is-selected > td { background: var(--accent-soft); }
 .act__diff ins { color: #067647; text-decoration: none; font-weight: 600; }
 .act__diff [data-lucide] { width: 12px; height: 12px; color: var(--text-muted, #5B6573); }
 .act__more { margin-top: var(--space-2); }
+
+/* Transfert d'engin : sélecteur d'engin et trajet */
+.fleet-eq__selected { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius); }
+.fleet-eq__selected .badge { margin-left: 4px; }
+.fleet-eq__results { max-height: 320px; overflow-y: auto; }
+.fleet-eq__results button.is-active, .fleet-eq__results button:hover { background: var(--accent-soft); }
+.fleet-eq__meta { display: block; margin-top: 2px; }
+.fleet-eq__none { padding: 12px 16px; color: var(--text-muted, #5B6573); }
+.fleet-route { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; background: #EAF1F8; color: #0D5487; font-weight: 600; font-size: 14px; }
+.fleet-route[hidden] { display: none; }
+.fleet-route [data-lucide] { width: 16px; height: 16px; }
+.fleet-route__label { font-weight: 500; color: var(--text-muted, #5B6573); margin-right: 4px; }

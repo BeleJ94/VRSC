@@ -73,7 +73,8 @@ final class FleetTransferController extends Controller
         $scope = $user->scopeFor('fleet.transfer');
         // Engins proposés : ceux des sites où l'on peut demander ; un site de destination peut aussi demander un engin d'ailleurs.
         $equipment = $this->db->fetchAll(
-            "SELECT e.id, e.code, e.name, e.site_id, s.name AS site FROM equipment e JOIN sites s ON s.id = e.site_id
+            "SELECT e.id, e.code, e.name, e.site_id, e.status, s.name AS site, c.name AS category
+               FROM equipment e JOIN sites s ON s.id = e.site_id LEFT JOIN equipment_categories c ON c.id = e.category_id
               WHERE e.is_archived = 0 AND e.id NOT IN (SELECT equipment_id FROM fleet_transfers WHERE status IN ('requested', 'authorized', 'departed'))
               ORDER BY s.name, e.code LIMIT 3000"
         );
@@ -82,7 +83,7 @@ final class FleetTransferController extends Controller
             'title' => t('fleet.new'),
             'equipment' => $equipment,
             'equipmentId' => $request->int('equipment_id'),
-            'sites' => $this->db->fetchAll('SELECT id, name FROM sites WHERE is_active = 1 ORDER BY name'),
+            'sites' => $this->db->fetchAll('SELECT id, code, name FROM sites WHERE is_active = 1 ORDER BY name'),
             'ownSites' => $scope,
             'carriers' => $this->references->options('carriers'),
             'drivers' => $this->db->fetchAll(
