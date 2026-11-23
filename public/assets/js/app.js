@@ -310,6 +310,50 @@
       });
   }
 
+  /**
+   * Historique des modifications : filtre par type (statuts, carburant, coûts…), N entrées puis « Afficher plus »,
+   * en-têtes de jour masqués quand toutes leurs entrées le sont. Sans JavaScript, tout reste visible.
+   */
+  function initActivity(root) {
+    $(root || document).find('[data-activity]').each(function () {
+      var box = this;
+      var limit = parseInt(box.getAttribute('data-activity-limit'), 10) || 8;
+      var filter = 'all';
+      var expanded = false;
+      var more = box.querySelector('[data-act-more]');
+      function apply() {
+        var shown = 0;
+        var matching = 0;
+        box.querySelectorAll('[data-act-item]').forEach(function (li) {
+          var match = filter === 'all' || li.getAttribute('data-cat') === filter;
+          if (match) matching++;
+          var visible = match && (expanded || shown < limit);
+          if (visible) shown++;
+          li.hidden = !visible;
+        });
+        box.querySelectorAll('[data-act-day]').forEach(function (day) {
+          var next = day.nextElementSibling;
+          var any = false;
+          while (next && !next.hasAttribute('data-act-day')) { if (!next.hidden) any = true; next = next.nextElementSibling; }
+          day.hidden = !any;
+        });
+        if (more) more.hidden = expanded || matching <= limit;
+      }
+      $(box).off('.act')
+        .on('click.act', '[data-act-filter]', function () {
+          filter = this.getAttribute('data-act-filter');
+          expanded = false;
+          $(box).find('[data-act-filter]').removeClass('is-active').attr('aria-pressed', 'false');
+          $(this).addClass('is-active').attr('aria-pressed', 'true');
+          apply();
+        })
+        .on('click.act', '[data-act-more]', function () { expanded = true; apply(); });
+      apply();
+    });
+  }
+  initActivity(document);
+  $(document).on('pm:content', function (e, root) { initActivity(root); });
+
   /** Envoi après confirmation, en conservant le bouton utilisé (ex. transition d'OT choisie). */
   function submitConfirmed(form, submitter) {
     if (document.querySelector('[data-ajax-page]') && (form.getAttribute('method') || '').toLowerCase() === 'post') {

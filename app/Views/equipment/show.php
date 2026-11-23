@@ -255,6 +255,8 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
                 </table></div>
             <?php endif; ?>
         </section>
+
+        <?= $view->partial('partials/activity', ['activity' => $activity, 'subject' => $item['code'], 'entity' => 'equipment']) ?>
     </div>
 
     <div>
@@ -475,7 +477,6 @@ $openWo = count(array_filter($workOrders, static fn (array $w) => in_array($w['s
     </div>
 </div>
 
-<?= $view->partial('partials/activity', ['activity' => $activity]) ?>
 
 <?php if ($currentUser->can('equipment.reading')): ?>
 <template id="reading-dialog">

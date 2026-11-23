@@ -127,7 +127,7 @@ final class WorkOrderController extends Controller
             'canExecute' => $canExecute && !$status->isClosed(),
             'parts' => $this->workOrders->parts((int) $wo['id']),
             'availableParts' => $canExecute && !$status->isClosed() ? $this->parts->availableOnSite((int) $wo['site_id']) : [],
-            'activity' => $user->can('activity.view') ? $this->activity->forEntity('work_order', (int) $wo['id']) : [],
+            'activity' => $user->can('activity.view') ? $this->activity->forEntity('work_order', (int) $wo['id'], 150) : [],
             'technicians' => $this->workOrders->technicians((int) $wo['id']),
             'services' => $this->workOrders->services((int) $wo['id']),
             'canAddService' => $canExecute && $status !== WorkOrderStatus::Cancelled,

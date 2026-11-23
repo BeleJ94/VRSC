@@ -119,7 +119,7 @@ final class EquipmentController extends Controller
             'operators' => $this->user()->can('equipment.assign') ? $this->personnel->forSite((int) $item['site_id'], Workforce::OPERATOR_JOBS) : [],
             'workOrders' => $this->workOrders->recentForEquipment((int) $item['id']),
             'plans' => $this->plans->forEquipment((int) $item['id']),
-            'activity' => $this->user()->can('activity.view') ? $this->activity->forEntity('equipment', (int) $item['id']) : [],
+            'activity' => $this->user()->can('activity.view') ? $this->activity->forEntity('equipment', (int) $item['id'], 300) : [],
         ]);
     }
 

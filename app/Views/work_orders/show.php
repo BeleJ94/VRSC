@@ -127,6 +127,6 @@ if ($wo['completed_at']) {
     </div>
 </div>
 
-<?= $view->partial('partials/activity', ['activity' => $activity]) ?>
+<?= $view->partial('partials/activity', ['activity' => $activity, 'subject' => $wo['reference'], 'entity' => 'work_order']) ?>
 
 <script type="application/json" id="wo-data"><?= json_for_html(['wo' => $wo + ['checks' => $checks ?? []], 'parts' => $parts, 'technicians' => $technicians ?? []]) ?></script>
