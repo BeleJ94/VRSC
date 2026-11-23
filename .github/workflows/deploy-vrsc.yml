@@ -36,3 +36,26 @@ jobs:
             git log -1 --oneline
 
             echo "=== Deployment completed ==="
+        
+                  script: |
+            set -e
+
+            cd /var/www/vhosts/belej-erp.com/vrsc.belej-erp.com
+
+            echo "=== Fetching GitHub ==="
+            git fetch origin main
+
+            echo "=== Deploying ==="
+            git reset --hard origin/main
+
+            echo "=== Installing dependencies ==="
+            COMPOSER_ALLOW_SUPERUSER=1 /opt/plesk/php/8.4/bin/php /usr/lib/plesk-9.0/composer.phar install --no-dev --optimize-autoloader --no-interaction
+
+            echo "=== Fixing permissions ==="
+            chown -R belej-erp.com_w1byz3rcb7a:psacln /var/www/vhosts/belej-erp.com/vrsc.belej-erp.com
+            chown belej-erp.com_w1byz3rcb7a:psaserv /var/www/vhosts/belej-erp.com/vrsc.belej-erp.com
+
+            echo "=== Current version ==="
+            git log -1 --oneline
+
+            echo "=== Deployment completed ==="
