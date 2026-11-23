@@ -22,7 +22,7 @@ $f = static fn (string $name, string $type, array $extra = []) => $view->partial
     <p class="muted"><?= e(t('fleet.form_help')) ?></p>
     <div class="form-grid">
         <?= $f('equipment_id', 'select', ['required' => true, 'default' => $equipmentId, 'options' => $equipmentOptions]) ?>
-        <?= $f('to_site_id', 'select', ['required' => true, 'options' => ['' => '—'] + array_column($sites, 'name', 'id')]) ?>
+        <?= $f('to_site_id', 'select', ['required' => true, 'labelKey' => 'fleet.to_site', 'hint' => t('fleet.to_site_hint'), 'options' => ['' => '—'] + array_column($sites, 'name', 'id')]) ?>
         <?= $f('reason', 'textarea', ['required' => true, 'class' => 'span-2', 'attrs' => ['maxlength' => 500, 'rows' => 2]]) ?>
         <?= $f('planned_departure', 'datetime-local') ?>
         <?= $f('planned_arrival', 'datetime-local') ?>

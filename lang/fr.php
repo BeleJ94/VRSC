@@ -2714,4 +2714,6 @@ Graisser les articulations',
     'report_eq_doc.missing' => 'Manquant',
     'report_eq_doc.na' => 'Non applicable',
     'report_eq_doc.none' => 'Sans échéance',
+    'fleet.to_site' => 'Site de destination',
+    'fleet.to_site_hint' => 'Site ou chantier où l\'engin doit être envoyé.',
 ];

@@ -2694,4 +2694,6 @@ Grease the joints',
     'report_eq_doc.missing' => 'Missing',
     'report_eq_doc.na' => 'Not applicable',
     'report_eq_doc.none' => 'No expiry',
+    'fleet.to_site' => 'Destination site',
+    'fleet.to_site_hint' => 'Site or project where the equipment is to be sent.',
 ];
